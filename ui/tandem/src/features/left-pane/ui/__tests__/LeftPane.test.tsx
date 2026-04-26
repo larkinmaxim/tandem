@@ -26,6 +26,7 @@ const noopProps = {
   activeSection: "chat" as const,
   onSectionChange: () => {},
   onNewChat: () => {},
+  onSessionClick: () => {},
 };
 
 describe("LeftPane", () => {
@@ -168,5 +169,20 @@ describe("LeftPane", () => {
       });
     });
     expect(screen.getAllByTestId(/session-row-/)).toHaveLength(2);
+  });
+
+  it("Chat section: clicking a session row calls onSessionClick with that session id", async () => {
+    const user = userEvent.setup();
+    const onSessionClick = vi.fn();
+    seedSessions(["Apple plans", "Banana split"]);
+    render(
+      <LeftPane
+        {...noopProps}
+        activeSection="chat"
+        onSessionClick={onSessionClick}
+      />,
+    );
+    await user.click(screen.getByTestId("session-row-s0"));
+    expect(onSessionClick).toHaveBeenCalledWith("s0");
   });
 });

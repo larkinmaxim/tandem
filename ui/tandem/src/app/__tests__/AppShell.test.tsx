@@ -9,11 +9,17 @@ vi.mock("@/shared/api/acpConnection", () => ({
 import { AppShell } from "@/app/AppShell";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useToastStore } from "@/features/toasts/toastStore";
+import {
+  DRAFT_TAB_PREFIX,
+  useTabsStore,
+} from "@/features/tabs/stores/tabsStore";
 
 describe("AppShell", () => {
   beforeEach(() => {
     useChatSessionStore.setState({ sessions: [], activeSessionId: null });
     useToastStore.setState({ toasts: [] });
+    useTabsStore.setState({ openIds: [], activeId: null });
+    localStorage.clear();
   });
 
   it("renders all 5 zones", () => {
@@ -167,5 +173,125 @@ describe("AppShell", () => {
       "data-active",
       "true",
     );
+  });
+
+  it("renders the TabBar in the main pane on the chat section", () => {
+    render(<AppShell />);
+    expect(screen.getByTestId("tab-bar")).toBeInTheDocument();
+  });
+
+  it("does not render the TabBar when a stub section is active", async () => {
+    const user = userEvent.setup();
+    render(<AppShell />);
+    await user.click(screen.getByTestId("section-btn-projects"));
+    expect(screen.queryByTestId("tab-bar")).not.toBeInTheDocument();
+  });
+
+  it("clicking a session row in the LeftPane opens it as a tab", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "abc",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+    });
+    render(<AppShell />);
+    await user.click(screen.getByTestId("session-row-abc"));
+    expect(screen.getByTestId("tab-abc")).toHaveTextContent("Existing chat");
+    expect(screen.getByTestId("tab-abc")).toHaveAttribute("data-active", "true");
+  });
+
+  it("clicking the same session row again does not duplicate the tab", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "abc",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+          {
+            id: "def",
+            title: "Other chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+    });
+    render(<AppShell />);
+    await user.click(screen.getByTestId("session-row-abc"));
+    await user.click(screen.getByTestId("session-row-def"));
+    await user.click(screen.getByTestId("session-row-abc"));
+    // Both tabs present; abc focused
+    expect(screen.getAllByTestId(/^tab-(abc|def)$/)).toHaveLength(2);
+    expect(screen.getByTestId("tab-abc")).toHaveAttribute("data-active", "true");
+  });
+
+  it("clicking the LeftPane + button opens a new draft tab synchronously titled 'New Chat'", async () => {
+    const user = userEvent.setup();
+    render(<AppShell />);
+    await user.click(screen.getByTestId("left-pane-new-chat"));
+
+    const { openIds, activeId } = useTabsStore.getState();
+    expect(openIds).toHaveLength(1);
+    expect(openIds[0].startsWith(DRAFT_TAB_PREFIX)).toBe(true);
+    expect(activeId).toBe(openIds[0]);
+    expect(screen.getByTestId(`tab-${openIds[0]}`)).toHaveTextContent(
+      "New Chat",
+    );
+  });
+
+  it("clicking the TabBar + button also opens a new draft tab", async () => {
+    const user = userEvent.setup();
+    render(<AppShell />);
+    await user.click(screen.getByTestId("tab-new"));
+
+    const { openIds } = useTabsStore.getState();
+    expect(openIds).toHaveLength(1);
+    expect(openIds[0].startsWith(DRAFT_TAB_PREFIX)).toBe(true);
+  });
+
+  it("does not call any ACP API when creating a new tab (drafts are local-only)", async () => {
+    const user = userEvent.setup();
+    render(<AppShell />);
+    await user.click(screen.getByTestId("left-pane-new-chat"));
+    // chatSessionStore stays empty — no real session was created
+    expect(useChatSessionStore.getState().sessions).toHaveLength(0);
+  });
+
+  it("clicking a tab close button removes the tab but keeps the session in history", async () => {
+    const user = userEvent.setup();
+    act(() => {
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "abc",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+    });
+    render(<AppShell />);
+    await user.click(screen.getByTestId("session-row-abc"));
+    expect(screen.getByTestId("tab-abc")).toBeInTheDocument();
+    await user.click(screen.getByTestId("tab-close-abc"));
+    expect(screen.queryByTestId("tab-abc")).not.toBeInTheDocument();
+    // Session still in history
+    expect(screen.getByTestId("session-row-abc")).toBeInTheDocument();
   });
 });
