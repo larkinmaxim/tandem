@@ -13,6 +13,7 @@ interface LeftPaneProps {
   activeSection: SectionId;
   onSectionChange: (id: SectionId) => void;
   onNewChat: () => void;
+  onSessionClick: (sessionId: string) => void;
 }
 
 const EXPANDED_WIDTH = 280;
@@ -114,6 +115,7 @@ export const LeftPane = ({
   activeSection,
   onSectionChange,
   onNewChat,
+  onSessionClick,
 }: LeftPaneProps) => {
   const [search, setSearch] = useState("");
   const sessions = useChatSessionStore((s) => s.sessions);
@@ -188,6 +190,15 @@ export const LeftPane = ({
                   <div
                     key={session.id}
                     data-testid={`session-row-${session.id}`}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => onSessionClick(session.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onSessionClick(session.id);
+                      }
+                    }}
                     style={sessionRowStyle}
                   >
                     {session.title}
