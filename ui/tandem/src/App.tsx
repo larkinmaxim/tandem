@@ -1,3 +1,16 @@
-import { BootstrapScreen } from "@/BootstrapScreen";
+import { useEffect } from "react";
 
-export const App = () => <BootstrapScreen />;
+import { AppShell } from "@/app/AppShell";
+
+export const App = () => {
+  useEffect(() => {
+    if (!window.__TAURI_INTERNALS__) return;
+    import("@tauri-apps/api/window").then(({ getCurrentWindow }) => {
+      getCurrentWindow()
+        .show()
+        .catch(() => {});
+    });
+  }, []);
+
+  return <AppShell />;
+};
