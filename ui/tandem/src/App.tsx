@@ -1,3 +1,3 @@
-import { BootstrapScreen } from "@/BootstrapScreen";
+import { AppShell } from "@/app/AppShell";
 
-export const App = () => <BootstrapScreen />;
+export const App = () => <AppShell />;
