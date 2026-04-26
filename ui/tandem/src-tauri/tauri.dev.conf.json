@@ -1,0 +1,7 @@
+{
+  "identifier": "com.tandem.app.dev",
+  "productName": "Tandem Dev",
+  "bundle": {
+    "externalBin": []
+  }
+}
