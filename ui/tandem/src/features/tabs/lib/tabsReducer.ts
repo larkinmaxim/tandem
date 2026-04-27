@@ -6,7 +6,8 @@ export interface TabsState {
 export type TabsAction =
   | { type: "OPEN_TAB"; sessionId: string }
   | { type: "CLOSE_TAB"; sessionId: string }
-  | { type: "SWITCH_TAB"; sessionId: string };
+  | { type: "SWITCH_TAB"; sessionId: string }
+  | { type: "REPLACE_TAB"; oldId: string; newId: string };
 
 export const initialTabsState: TabsState = {
   openIds: [],
@@ -44,6 +45,26 @@ export function tabsReducer(state: TabsState, action: TabsAction): TabsState {
       if (!state.openIds.includes(action.sessionId)) return state;
       if (state.activeId === action.sessionId) return state;
       return { ...state, activeId: action.sessionId };
+    }
+    case "REPLACE_TAB": {
+      const idx = state.openIds.indexOf(action.oldId);
+      if (idx === -1) return state;
+      // If newId is already open elsewhere, just drop the old slot.
+      if (state.openIds.includes(action.newId)) {
+        const openIds = state.openIds.filter((id) => id !== action.oldId);
+        return {
+          openIds,
+          activeId:
+            state.activeId === action.oldId ? action.newId : state.activeId,
+        };
+      }
+      const openIds = [...state.openIds];
+      openIds[idx] = action.newId;
+      return {
+        openIds,
+        activeId:
+          state.activeId === action.oldId ? action.newId : state.activeId,
+      };
     }
     default:
       return state;

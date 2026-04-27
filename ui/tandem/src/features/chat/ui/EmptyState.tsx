@@ -4,9 +4,13 @@ import { Composer } from "@/features/chat/ui/Composer";
 
 export interface EmptyStateProps {
   name?: string;
+  onSend?: (text: string) => void;
 }
 
-export const EmptyState = ({ name = DEFAULT_USER_NAME }: EmptyStateProps) => {
+export const EmptyState = ({
+  name = DEFAULT_USER_NAME,
+  onSend,
+}: EmptyStateProps) => {
   const tod = getTimeOfDay();
   return (
     <div
@@ -34,7 +38,7 @@ export const EmptyState = ({ name = DEFAULT_USER_NAME }: EmptyStateProps) => {
         <br />
         <em>What are we working on?</em>
       </div>
-      <Composer />
+      <Composer onSend={onSend} />
     </div>
   );
 };

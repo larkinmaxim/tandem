@@ -1,9 +1,29 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/shared/api/acpConnection", () => ({
   getClient: vi.fn(() => new Promise(() => {})),
+}));
+
+const { mockAcpCreateSession, mockAcpSendMessage, mockResolvePath } =
+  vi.hoisted(() => ({
+    mockAcpCreateSession: vi.fn(),
+    mockAcpSendMessage: vi.fn(),
+    mockResolvePath: vi.fn(),
+  }));
+
+vi.mock("@/shared/api/acp", async (importActual) => {
+  const actual = await importActual<typeof import("@/shared/api/acp")>();
+  return {
+    ...actual,
+    acpCreateSession: mockAcpCreateSession,
+    acpSendMessage: mockAcpSendMessage,
+  };
+});
+
+vi.mock("@/shared/api/pathResolver", () => ({
+  resolvePath: mockResolvePath,
 }));
 
 import { AppShell } from "@/app/AppShell";
@@ -14,6 +34,17 @@ import {
   DRAFT_TAB_PREFIX,
   useTabsStore,
 } from "@/features/tabs/stores/tabsStore";
+import { TABS_STORAGE_KEY } from "@/features/tabs/lib/tabPersistence";
+
+function seedTabs(openIds: string[], activeId: string | null) {
+  // Persist + setState so the AppShell hydrate effect restores the same shape
+  // instead of clobbering test setup with an empty localStorage read.
+  localStorage.setItem(
+    TABS_STORAGE_KEY,
+    JSON.stringify({ openIds, activeId }),
+  );
+  useTabsStore.setState({ openIds, activeId });
+}
 
 describe("AppShell", () => {
   beforeEach(() => {
@@ -22,6 +53,13 @@ describe("AppShell", () => {
     useToastStore.setState({ toasts: [] });
     useTabsStore.setState({ openIds: [], activeId: null });
     localStorage.clear();
+    mockAcpCreateSession.mockReset();
+    mockAcpSendMessage.mockReset();
+    mockResolvePath.mockReset();
+    mockResolvePath.mockResolvedValue({
+      path: "/home/test/.goose/artifacts",
+    });
+    mockAcpSendMessage.mockResolvedValue(undefined);
   });
 
   it("renders all 5 zones", () => {
@@ -282,7 +320,7 @@ describe("AppShell", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(2026, 3, 27, 10, 0, 0)); // 10:00 AM local
       const draftId = `${DRAFT_TAB_PREFIX}abc`;
-      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+      seedTabs([draftId], draftId);
 
       render(<AppShell />);
 
@@ -296,7 +334,7 @@ describe("AppShell", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(2026, 3, 27, 14, 0, 0));
       const draftId = `${DRAFT_TAB_PREFIX}abc`;
-      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+      seedTabs([draftId], draftId);
 
       render(<AppShell />);
 
@@ -309,7 +347,7 @@ describe("AppShell", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date(2026, 3, 27, 20, 0, 0));
       const draftId = `${DRAFT_TAB_PREFIX}abc`;
-      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+      seedTabs([draftId], draftId);
 
       render(<AppShell />);
 
@@ -320,12 +358,63 @@ describe("AppShell", () => {
 
     it("renders a multi-line textarea composer inside the empty state", () => {
       const draftId = `${DRAFT_TAB_PREFIX}abc`;
-      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+      seedTabs([draftId], draftId);
 
       render(<AppShell />);
 
       const composer = screen.getByTestId("chat-composer-input");
       expect(composer.tagName).toBe("TEXTAREA");
+    });
+
+    it("first send from a draft tab creates a session, replaces the tab id, and hard-swaps to the timeline", async () => {
+      const user = userEvent.setup();
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      mockAcpCreateSession.mockResolvedValue({
+        sessionId: "real-session-id",
+      });
+
+      render(<AppShell />);
+
+      const input = screen.getByTestId("chat-composer-input");
+      await user.type(input, "hello world");
+      await user.keyboard("{Enter}");
+
+      // Empty state gone, timeline showing the user's message
+      await waitFor(
+        () => {
+          expect(mockAcpCreateSession).toHaveBeenCalled();
+        },
+        { timeout: 3000 },
+      );
+      await waitFor(
+        () => {
+          expect(screen.queryByTestId("chat-empty-state")).not.toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
+      const timeline = screen.getByTestId("chat-timeline");
+      expect(timeline).toHaveTextContent("hello world");
+
+      // Tab swapped to real session id
+      const { openIds, activeId } = useTabsStore.getState();
+      expect(openIds).toEqual(["real-session-id"]);
+      expect(activeId).toBe("real-session-id");
+
+      // Session in store, message persisted
+      const sessions = useChatSessionStore.getState().sessions;
+      expect(sessions.map((s) => s.id)).toContain("real-session-id");
+      const msgs =
+        useChatStore.getState().messagesBySession["real-session-id"] ?? [];
+      expect(msgs).toHaveLength(1);
+      expect(msgs[0].role).toBe("user");
+
+      // ACP prompt sent
+      expect(mockAcpSendMessage).toHaveBeenCalledWith(
+        "real-session-id",
+        "hello world",
+      );
     });
   });
 
