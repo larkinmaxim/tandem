@@ -9,6 +9,7 @@ import {
   useTabsStore,
 } from "@/features/tabs/stores/tabsStore";
 import { createUserMessage } from "@/shared/types/messages";
+import type { ComposerAttachment } from "@/features/chat/ui/Composer";
 
 const isDraftId = (id: string) => id.startsWith(DRAFT_TAB_PREFIX);
 
@@ -18,7 +19,7 @@ async function defaultWorkingDir(): Promise<string> {
 }
 
 export interface UseChatResult {
-  send: (text: string) => Promise<void>;
+  send: (text: string, attachments?: ComposerAttachment[]) => Promise<void>;
   hasMessages: boolean;
 }
 
@@ -28,7 +29,7 @@ export function useChat(tabId: string | null): UseChatResult {
   );
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, attachments?: ComposerAttachment[]) => {
       if (!tabId) return;
 
       let sessionId = tabId;
@@ -42,7 +43,15 @@ export function useChat(tabId: string | null): UseChatResult {
       }
 
       useChatStore.getState().addMessage(sessionId, createUserMessage(text));
-      await acpSendMessage(sessionId, text);
+      if (attachments && attachments.length > 0) {
+        const images: [string, string][] = attachments.map((a) => [
+          a.data,
+          a.mimeType,
+        ]);
+        await acpSendMessage(sessionId, text, { images });
+      } else {
+        await acpSendMessage(sessionId, text);
+      }
     },
     [tabId],
   );

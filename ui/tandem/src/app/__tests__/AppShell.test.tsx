@@ -591,6 +591,48 @@ describe("AppShell", () => {
         "hello world",
       );
     });
+
+    it("includes attached image in the ACP prompt payload as options.images", async () => {
+      const user = userEvent.setup();
+      const draftId = `${DRAFT_TAB_PREFIX}img`;
+      seedTabs([draftId], draftId);
+
+      mockAcpCreateSession.mockResolvedValue({
+        sessionId: "real-session-img",
+      });
+
+      render(<AppShell />);
+
+      const fileInput = screen.getByTestId(
+        "chat-composer-attach-input",
+      ) as HTMLInputElement;
+      const file = new File(["fake-png-bytes"], "diagram.png", {
+        type: "image/png",
+      });
+      await user.upload(fileInput, file);
+      await screen.findByTestId("chat-composer-attachment-chip");
+
+      const input = screen.getByTestId("chat-composer-input");
+      await user.type(input, "look at this");
+      await user.keyboard("{Enter}");
+
+      await waitFor(
+        () => {
+          expect(mockAcpSendMessage).toHaveBeenCalled();
+        },
+        { timeout: 3000 },
+      );
+
+      const [sessionId, text, options] = mockAcpSendMessage.mock.calls[0];
+      expect(sessionId).toBe("real-session-img");
+      expect(text).toBe("look at this");
+      expect(options).toBeDefined();
+      expect(options.images).toHaveLength(1);
+      const [data, mimeType] = options.images[0];
+      expect(typeof data).toBe("string");
+      expect(data.length).toBeGreaterThan(0);
+      expect(mimeType).toBe("image/png");
+    });
   });
 
   it("clicking a tab close button removes the tab but keeps the session in history", async () => {
