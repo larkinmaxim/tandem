@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 vi.mock("@/shared/api/acpConnection", () => ({
   getClient: vi.fn(() => new Promise(() => {})),
+  setNotificationHandler: vi.fn(),
 }));
 
 const { mockAcpCreateSession, mockAcpSendMessage, mockResolvePath } =
