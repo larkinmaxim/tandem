@@ -366,6 +366,95 @@ describe("AppShell", () => {
       expect(composer.tagName).toBe("TEXTAREA");
     });
 
+    it("renders the timeline (no empty state) when the active tab has messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.queryByTestId("chat-empty-state")).not.toBeInTheDocument();
+      const timeline = screen.getByTestId("chat-timeline");
+      expect(timeline).toHaveTextContent("hi");
+      expect(timeline).toHaveTextContent("hello back");
+    });
+
+    it("renders user initials on user messages and an assistant icon on assistant messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      const userAvatar = screen.getByTestId("chat-avatar-u1");
+      expect(userAvatar).toHaveAttribute("data-role", "user");
+      // DEFAULT_USER_NAME = "Maxim" → initials "M"
+      expect(userAvatar).toHaveTextContent("M");
+
+      const assistantAvatar = screen.getByTestId("chat-avatar-a1");
+      expect(assistantAvatar).toHaveAttribute("data-role", "assistant");
+      // Assistant avatar is an icon (svg), not text
+      expect(assistantAvatar.querySelector("svg")).toBeInTheDocument();
+    });
+
     it("first send from a draft tab creates a session, replaces the tab id, and hard-swaps to the timeline", async () => {
       const user = userEvent.setup();
       const draftId = `${DRAFT_TAB_PREFIX}abc`;
