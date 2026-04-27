@@ -632,6 +632,59 @@ describe("AppShell", () => {
       expect(screen.getByTestId("chat-typing-indicator")).toBeInTheDocument();
     });
 
+    it("composer footer reflects the active session's tokenState from chatStore", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+        sessionStateById: {
+          "sess-1": {
+            chatState: "idle",
+            tokenState: {
+              inputTokens: 0,
+              outputTokens: 0,
+              totalTokens: 0,
+              accumulatedInput: 0,
+              accumulatedOutput: 0,
+              accumulatedTotal: 8420,
+              contextLimit: 200000,
+            },
+            hasUsageSnapshot: true,
+            streamingMessageId: null,
+            pendingAssistantProviderId: null,
+            error: null,
+            hasUnread: false,
+          },
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-composer-token-counter")).toHaveTextContent(
+        "8.4k / 200k",
+      );
+    });
+
     it("hides the typing indicator when chatState is idle", () => {
       seedTabs(["sess-1"], "sess-1");
       useChatSessionStore.setState({

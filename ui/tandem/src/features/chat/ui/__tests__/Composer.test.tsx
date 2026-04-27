@@ -158,6 +158,62 @@ describe("Composer", () => {
     ).not.toBeInTheDocument();
   });
 
+  it("renders a read-only context-folder chip in the footer (default 'Default')", () => {
+    render(<Composer />);
+    const chip = screen.getByTestId("chat-composer-context-folder");
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveTextContent("Default");
+  });
+
+  it("renders the contextFolder prop value in the chip", () => {
+    render(<Composer contextFolder="my-project" />);
+    expect(screen.getByTestId("chat-composer-context-folder")).toHaveTextContent(
+      "my-project",
+    );
+  });
+
+  it("renders a read-only MCP count chip in the footer (default 0)", () => {
+    render(<Composer />);
+    const chip = screen.getByTestId("chat-composer-mcp-count");
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveTextContent("MCP");
+    expect(chip).toHaveTextContent("0");
+  });
+
+  it("renders the mcpCount prop value in the badge", () => {
+    render(<Composer mcpCount={3} />);
+    expect(screen.getByTestId("chat-composer-mcp-count")).toHaveTextContent("3");
+  });
+
+  it("renders a token-counter chip showing '0' when tokenLimit is unknown", () => {
+    render(<Composer />);
+    const chip = screen.getByTestId("chat-composer-token-counter");
+    expect(chip).toBeInTheDocument();
+    expect(chip).toHaveTextContent("0");
+    expect(chip).not.toHaveTextContent("/");
+  });
+
+  it("formats the token counter as 'X.Xk / Yk' when limit > 0 (sub-10k uses one decimal)", () => {
+    render(<Composer tokenUsed={8420} tokenLimit={200000} />);
+    expect(screen.getByTestId("chat-composer-token-counter")).toHaveTextContent(
+      "8.4k / 200k",
+    );
+  });
+
+  it("drops the trailing '.0' from the used side (e.g. 1000 -> '1k')", () => {
+    render(<Composer tokenUsed={1000} tokenLimit={200000} />);
+    expect(screen.getByTestId("chat-composer-token-counter")).toHaveTextContent(
+      "1k / 200k",
+    );
+  });
+
+  it("renders the used side without a decimal once at or above 10000", () => {
+    render(<Composer tokenUsed={12345} tokenLimit={200000} />);
+    expect(screen.getByTestId("chat-composer-token-counter")).toHaveTextContent(
+      "12k / 200k",
+    );
+  });
+
   it("removes an attachment when its remove (×) button is clicked", async () => {
     const user = userEvent.setup();
     render(<Composer />);
