@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
@@ -8,6 +8,7 @@ vi.mock("@/shared/api/acpConnection", () => ({
 
 import { AppShell } from "@/app/AppShell";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useToastStore } from "@/features/toasts/toastStore";
 import {
   DRAFT_TAB_PREFIX,
@@ -17,6 +18,7 @@ import {
 describe("AppShell", () => {
   beforeEach(() => {
     useChatSessionStore.setState({ sessions: [], activeSessionId: null });
+    useChatStore.setState({ messagesBySession: {} });
     useToastStore.setState({ toasts: [] });
     useTabsStore.setState({ openIds: [], activeId: null });
     localStorage.clear();
@@ -269,6 +271,52 @@ describe("AppShell", () => {
     await user.click(screen.getByTestId("left-pane-new-chat"));
     // chatSessionStore stays empty — no real session was created
     expect(useChatSessionStore.getState().sessions).toHaveLength(0);
+  });
+
+  describe("chat empty state", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("shows the empty-state greeting in the main pane when the active tab is a draft with no messages", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 3, 27, 10, 0, 0)); // 10:00 AM local
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+
+      render(<AppShell />);
+
+      const empty = screen.getByTestId("chat-empty-state");
+      expect(empty).toBeInTheDocument();
+      expect(empty).toHaveTextContent(/Good morning/i);
+      expect(empty).toHaveTextContent(/What are we working on\?/i);
+    });
+
+    it("uses 'afternoon' between 12:00 and 17:59", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 3, 27, 14, 0, 0));
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-empty-state")).toHaveTextContent(
+        /Good afternoon/i,
+      );
+    });
+
+    it("uses 'evening' from 18:00 onward", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 3, 27, 20, 0, 0));
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-empty-state")).toHaveTextContent(
+        /Good evening/i,
+      );
+    });
   });
 
   it("clicking a tab close button removes the tab but keeps the session in history", async () => {
