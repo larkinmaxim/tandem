@@ -49,7 +49,7 @@ function seedTabs(openIds: string[], activeId: string | null) {
 describe("AppShell", () => {
   beforeEach(() => {
     useChatSessionStore.setState({ sessions: [], activeSessionId: null });
-    useChatStore.setState({ messagesBySession: {} });
+    useChatStore.setState({ messagesBySession: {}, sessionStateById: {} });
     useToastStore.setState({ toasts: [] });
     useTabsStore.setState({ openIds: [], activeId: null });
     localStorage.clear();
@@ -453,6 +453,91 @@ describe("AppShell", () => {
       expect(assistantAvatar).toHaveAttribute("data-role", "assistant");
       // Assistant avatar is an icon (svg), not text
       expect(assistantAvatar.querySelector("svg")).toBeInTheDocument();
+    });
+
+    it("shows a typing indicator while the assistant is generating", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+        sessionStateById: {
+          "sess-1": {
+            chatState: "streaming",
+            tokenState: {
+              inputTokens: 0,
+              outputTokens: 0,
+              totalTokens: 0,
+              accumulatedInput: 0,
+              accumulatedOutput: 0,
+              accumulatedTotal: 0,
+              contextLimit: 0,
+            },
+            hasUsageSnapshot: false,
+            streamingMessageId: null,
+            pendingAssistantProviderId: null,
+            error: null,
+            hasUnread: false,
+          },
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-typing-indicator")).toBeInTheDocument();
+    });
+
+    it("hides the typing indicator when chatState is idle", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(
+        screen.queryByTestId("chat-typing-indicator"),
+      ).not.toBeInTheDocument();
     });
 
     it("first send from a draft tab creates a session, replaces the tab id, and hard-swaps to the timeline", async () => {
