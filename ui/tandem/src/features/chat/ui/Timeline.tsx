@@ -1,9 +1,23 @@
 import { Sparkles } from "lucide-react";
 
 import { useChatStore } from "@/features/chat/stores/chatStore";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { getUserInitials } from "@/features/chat/lib/userIdentity";
 import { getTextContent, type Message } from "@/shared/types/messages";
 import type { ChatState } from "@/shared/types/chat";
+
+const FALLBACK_PERSONA_NAME = "Tandem";
+
+function usePersonaNameForSession(sessionId: string): string {
+  const personaId = useChatSessionStore(
+    (s) => s.sessions.find((x) => x.id === sessionId)?.personaId,
+  );
+  const personaName = useAgentStore((s) =>
+    personaId ? s.personas.find((p) => p.id === personaId)?.displayName : undefined,
+  );
+  return personaName ?? FALLBACK_PERSONA_NAME;
+}
 
 export interface TimelineProps {
   sessionId: string;
@@ -23,6 +37,7 @@ export const Timeline = ({ sessionId }: TimelineProps) => {
   const chatState = useChatStore(
     (s) => s.sessionStateById[sessionId]?.chatState ?? "idle",
   );
+  const personaName = usePersonaNameForSession(sessionId);
   const showTypingIndicator = ASSISTANT_BUSY_STATES.has(chatState);
 
   return (
@@ -38,7 +53,7 @@ export const Timeline = ({ sessionId }: TimelineProps) => {
       }}
     >
       {messages.map((m) => (
-        <MessageRow key={m.id} message={m} />
+        <MessageRow key={m.id} message={m} personaName={personaName} />
       ))}
       {showTypingIndicator && <TypingIndicator />}
     </div>
@@ -124,7 +139,14 @@ const Avatar = ({ message }: { message: Message }) => {
   );
 };
 
-const MessageRow = ({ message }: { message: Message }) => {
+const MessageRow = ({
+  message,
+  personaName,
+}: {
+  message: Message;
+  personaName: string;
+}) => {
+  const isAssistant = message.role === "assistant";
   return (
     <div
       data-testid={`chat-message-${message.role}`}
@@ -138,14 +160,36 @@ const MessageRow = ({ message }: { message: Message }) => {
       <Avatar message={message} />
       <div
         style={{
-          fontFamily: "var(--font-reading)",
-          color: "var(--color-text)",
-          whiteSpace: "pre-wrap",
-          lineHeight: 1.55,
-          paddingTop: 4,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
         }}
       >
-        {getTextContent(message)}
+        {isAssistant && (
+          <div
+            data-testid={`chat-message-persona-${message.id}`}
+            style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: 12,
+              color: "var(--color-text)",
+              fontWeight: 500,
+              marginBottom: 2,
+            }}
+          >
+            {personaName}
+          </div>
+        )}
+        <div
+          style={{
+            fontFamily: "var(--font-reading)",
+            color: "var(--color-text)",
+            whiteSpace: "pre-wrap",
+            lineHeight: 1.55,
+            paddingTop: isAssistant ? 0 : 4,
+          }}
+        >
+          {getTextContent(message)}
+        </div>
       </div>
     </div>
   );

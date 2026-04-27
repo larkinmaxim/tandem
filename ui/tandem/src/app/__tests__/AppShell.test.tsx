@@ -31,6 +31,7 @@ import { AppShell } from "@/app/AppShell";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useToastStore } from "@/features/toasts/toastStore";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
 import {
   DRAFT_TAB_PREFIX,
   useTabsStore,
@@ -52,6 +53,7 @@ describe("AppShell", () => {
     useChatSessionStore.setState({ sessions: [], activeSessionId: null });
     useChatStore.setState({ messagesBySession: {}, sessionStateById: {} });
     useToastStore.setState({ toasts: [] });
+    useAgentStore.setState({ personas: [] });
     useTabsStore.setState({ openIds: [], activeId: null });
     localStorage.clear();
     mockAcpCreateSession.mockReset();
@@ -454,6 +456,129 @@ describe("AppShell", () => {
       expect(assistantAvatar).toHaveAttribute("data-role", "assistant");
       // Assistant avatar is an icon (svg), not text
       expect(assistantAvatar.querySelector("svg")).toBeInTheDocument();
+    });
+
+    it("shows the persona's displayName on assistant messages when the session has a matching personaId", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            personaId: "p1",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useAgentStore.setState({
+        personas: [
+          {
+            id: "p1",
+            displayName: "Senior Engineer",
+            systemPrompt: "",
+            isBuiltin: true,
+            createdAt: "",
+            updatedAt: "",
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "a1",
+              role: "assistant",
+              created: 1,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-message-persona-a1")).toHaveTextContent(
+        "Senior Engineer",
+      );
+    });
+
+    it("does not render the persona header above user messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(
+        screen.queryByTestId("chat-message-persona-u1"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("chat-message-persona-a1")).toBeInTheDocument();
+    });
+
+    it("shows the fallback persona name 'Tandem' on assistant messages when the session has no personaId", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "a1",
+              role: "assistant",
+              created: 1,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-message-persona-a1")).toHaveTextContent(
+        "Tandem",
+      );
     });
 
     it("shows a typing indicator while the assistant is generating", () => {
