@@ -59,4 +59,20 @@ describe("Composer", () => {
 
     expect(onSend).not.toHaveBeenCalled();
   });
+
+  it("inserts a newline on Shift+Enter and does not submit", async () => {
+    const user = userEvent.setup();
+    const onSend = vi.fn();
+    render(<Composer onSend={onSend} />);
+    const input = screen.getByTestId(
+      "chat-composer-input",
+    ) as HTMLTextAreaElement;
+
+    await user.type(input, "line one");
+    await user.keyboard("{Shift>}{Enter}{/Shift}");
+    await user.type(input, "line two");
+
+    expect(onSend).not.toHaveBeenCalled();
+    expect(input.value).toBe("line one\nline two");
+  });
 });
