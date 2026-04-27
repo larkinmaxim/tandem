@@ -1,5 +1,6 @@
 import { getTimeOfDay } from "@/features/chat/lib/timeOfDay";
 import { DEFAULT_USER_NAME } from "@/features/chat/lib/userIdentity";
+import { Composer } from "@/features/chat/ui/Composer";
 
 export interface EmptyStateProps {
   name?: string;
@@ -16,7 +17,7 @@ export const EmptyState = ({ name = DEFAULT_USER_NAME }: EmptyStateProps) => {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        gap: 16,
+        gap: 24,
         padding: 32,
       }}
     >
@@ -33,6 +34,7 @@ export const EmptyState = ({ name = DEFAULT_USER_NAME }: EmptyStateProps) => {
         <br />
         <em>What are we working on?</em>
       </div>
+      <Composer />
     </div>
   );
 };

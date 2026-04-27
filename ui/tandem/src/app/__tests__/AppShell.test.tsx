@@ -317,6 +317,16 @@ describe("AppShell", () => {
         /Good evening/i,
       );
     });
+
+    it("renders a multi-line textarea composer inside the empty state", () => {
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      useTabsStore.setState({ openIds: [draftId], activeId: draftId });
+
+      render(<AppShell />);
+
+      const composer = screen.getByTestId("chat-composer-input");
+      expect(composer.tagName).toBe("TEXTAREA");
+    });
   });
 
   it("clicking a tab close button removes the tab but keeps the session in history", async () => {
