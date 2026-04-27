@@ -1,10 +1,26 @@
+import { useState, type KeyboardEvent } from "react";
+
 export interface ComposerProps {
   placeholder?: string;
+  onSend?: (text: string) => void;
 }
 
 export const Composer = ({
   placeholder = "Ask anything, or paste a file…",
+  onSend,
 }: ComposerProps) => {
+  const [value, setValue] = useState("");
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const trimmed = value.trim();
+      if (!trimmed) return;
+      onSend?.(trimmed);
+      setValue("");
+    }
+  };
+
   return (
     <div
       data-testid="chat-composer"
@@ -24,6 +40,9 @@ export const Composer = ({
         data-testid="chat-composer-input"
         placeholder={placeholder}
         rows={2}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={handleKeyDown}
         style={{
           width: "100%",
           minHeight: 44,
