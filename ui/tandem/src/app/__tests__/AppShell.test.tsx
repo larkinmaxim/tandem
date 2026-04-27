@@ -28,15 +28,37 @@ vi.mock("@/shared/api/pathResolver", () => ({
 }));
 
 import { AppShell } from "@/app/AppShell";
+import type { ProviderInventoryEntryDto } from "@aaif/goose-sdk";
+
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useToastStore } from "@/features/toasts/toastStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useProviderInventoryStore } from "@/features/providers/stores/providerInventoryStore";
 import {
   DRAFT_TAB_PREFIX,
   useTabsStore,
 } from "@/features/tabs/stores/tabsStore";
 import { TABS_STORAGE_KEY } from "@/features/tabs/lib/tabPersistence";
+
+function makeConfiguredEntry(
+  providerId = "openai",
+): ProviderInventoryEntryDto {
+  return {
+    providerId,
+    providerName: providerId,
+    description: "",
+    defaultModel: "gpt-4",
+    configured: true,
+    providerType: "Builtin",
+    configKeys: [],
+    setupSteps: [],
+    supportsRefresh: false,
+    refreshing: false,
+    models: [],
+    stale: false,
+  };
+}
 
 function seedTabs(openIds: string[], activeId: string | null) {
   // Persist + setState so the AppShell hydrate effect restores the same shape
@@ -54,6 +76,12 @@ describe("AppShell", () => {
     useChatStore.setState({ messagesBySession: {}, sessionStateById: {} });
     useToastStore.setState({ toasts: [] });
     useAgentStore.setState({ personas: [] });
+    useProviderInventoryStore.setState({
+      entries: new Map<string, ProviderInventoryEntryDto>([
+        ["openai", makeConfiguredEntry("openai")],
+      ]),
+      loading: false,
+    });
     useTabsStore.setState({ openIds: [], activeId: null });
     localStorage.clear();
     mockAcpCreateSession.mockReset();
@@ -810,6 +838,58 @@ describe("AppShell", () => {
       expect(typeof data).toBe("string");
       expect(data.length).toBeGreaterThan(0);
       expect(mimeType).toBe("image/png");
+    });
+  });
+
+  describe("providers banner (slice 11)", () => {
+    it("renders a banner with the warning copy when no providers are configured", () => {
+      useProviderInventoryStore.setState({
+        entries: new Map<string, ProviderInventoryEntryDto>(),
+      });
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const banner = screen.getByTestId("chat-providers-banner");
+      expect(banner).toBeInTheDocument();
+      expect(banner).toHaveTextContent(/no providers configured/i);
+      expect(banner).toHaveTextContent(/open goose2/i);
+    });
+
+    it("disables the composer textarea and attach button when no providers are configured", () => {
+      useProviderInventoryStore.setState({
+        entries: new Map<string, ProviderInventoryEntryDto>(),
+      });
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const input = screen.getByTestId("chat-composer-input");
+      expect(input).toBeDisabled();
+      const attach = screen.getByTestId("chat-composer-attach");
+      expect(attach).toBeDisabled();
+    });
+
+    it("does not render the banner when at least one entry has configured: true", () => {
+      useProviderInventoryStore.setState({
+        entries: new Map<string, ProviderInventoryEntryDto>([
+          [
+            "openai",
+            { ...makeConfiguredEntry("openai"), configured: false },
+          ],
+          ["anthropic", makeConfiguredEntry("anthropic")],
+        ]),
+      });
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(
+        screen.queryByTestId("chat-providers-banner"),
+      ).not.toBeInTheDocument();
     });
   });
 

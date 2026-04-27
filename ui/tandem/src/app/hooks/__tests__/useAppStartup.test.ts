@@ -1,11 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import type { SessionNotification } from "@agentclientprotocol/sdk";
+import type { ProviderInventoryEntryDto } from "@aaif/goose-sdk";
 
-const { mockSetNotificationHandler, mockGetClient } = vi.hoisted(() => ({
-  mockSetNotificationHandler: vi.fn(),
-  mockGetClient: vi.fn(),
-}));
+const { mockSetNotificationHandler, mockGetClient, mockGetProviderInventory } =
+  vi.hoisted(() => ({
+    mockSetNotificationHandler: vi.fn(),
+    mockGetClient: vi.fn(),
+    mockGetProviderInventory: vi.fn(),
+  }));
 
 vi.mock("@/shared/api/acpConnection", () => ({
   setNotificationHandler: mockSetNotificationHandler,
@@ -20,20 +23,51 @@ vi.mock("@/shared/api/acp", async (importActual) => {
   };
 });
 
+vi.mock("@/features/providers/api/inventory", () => ({
+  getProviderInventory: mockGetProviderInventory,
+}));
+
 import { useAppStartup } from "@/app/hooks/useAppStartup";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useProviderInventoryStore } from "@/features/providers/stores/providerInventoryStore";
 import {
   registerSession,
   unregisterSession,
 } from "@/shared/api/acpSessionTracker";
 import type { AcpNotificationHandler } from "@/shared/api/acpConnection";
 
+function makeEntry(
+  providerId: string,
+  configured: boolean,
+): ProviderInventoryEntryDto {
+  return {
+    providerId,
+    providerName: providerId,
+    description: "",
+    defaultModel: "default",
+    configured,
+    providerType: "Builtin",
+    configKeys: [],
+    setupSteps: [],
+    supportsRefresh: false,
+    refreshing: false,
+    models: [],
+    stale: false,
+  };
+}
+
 describe("useAppStartup ACP notification wire-up (slice 7b)", () => {
   beforeEach(() => {
     mockSetNotificationHandler.mockReset();
     mockGetClient.mockReset();
     mockGetClient.mockResolvedValue({});
+    mockGetProviderInventory.mockReset();
+    mockGetProviderInventory.mockResolvedValue([]);
+    useProviderInventoryStore.setState({
+      entries: new Map<string, ProviderInventoryEntryDto>(),
+      loading: false,
+    });
     useChatStore.setState({
       messagesBySession: {},
       sessionStateById: {},
@@ -97,5 +131,38 @@ describe("useAppStartup ACP notification wire-up (slice 7b)", () => {
     if (textBlock?.type === "text") {
       expect(textBlock.text).toBe("hello from agent");
     }
+  });
+});
+
+describe("useAppStartup provider inventory load (slice 11)", () => {
+  beforeEach(() => {
+    mockSetNotificationHandler.mockReset();
+    mockGetClient.mockReset();
+    mockGetClient.mockResolvedValue({});
+    mockGetProviderInventory.mockReset();
+    useProviderInventoryStore.setState({
+      entries: new Map<string, ProviderInventoryEntryDto>(),
+      loading: false,
+    });
+  });
+
+  it("populates providerInventoryStore from getProviderInventory() on mount", async () => {
+    mockGetProviderInventory.mockResolvedValue([
+      makeEntry("openai", true),
+      makeEntry("anthropic", false),
+    ]);
+
+    renderHook(() => useAppStartup());
+
+    await waitFor(() => {
+      expect(mockGetProviderInventory).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(useProviderInventoryStore.getState().entries.size).toBe(2);
+    });
+
+    const entries = useProviderInventoryStore.getState().entries;
+    expect(entries.get("openai")?.configured).toBe(true);
+    expect(entries.get("anthropic")?.configured).toBe(false);
   });
 });

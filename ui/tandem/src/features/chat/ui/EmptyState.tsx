@@ -8,11 +8,13 @@ import {
 export interface EmptyStateProps {
   name?: string;
   onSend?: (text: string, attachments: ComposerAttachment[]) => void;
+  composerDisabled?: boolean;
 }
 
 export const EmptyState = ({
   name = DEFAULT_USER_NAME,
   onSend,
+  composerDisabled = false,
 }: EmptyStateProps) => {
   const tod = getTimeOfDay();
   return (
@@ -41,7 +43,7 @@ export const EmptyState = ({
         <br />
         <em>What are we working on?</em>
       </div>
-      <Composer onSend={onSend} />
+      <Composer onSend={onSend} disabled={composerDisabled} />
     </div>
   );
 };

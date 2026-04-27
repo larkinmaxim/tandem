@@ -26,6 +26,7 @@ export interface ComposerProps {
   mcpCount?: number;
   tokenUsed?: number;
   tokenLimit?: number;
+  disabled?: boolean;
 }
 
 function formatTokenCount(used: number, limit: number): string {
@@ -75,6 +76,7 @@ export const Composer = ({
   mcpCount = 0,
   tokenUsed = 0,
   tokenLimit = 0,
+  disabled = false,
 }: ComposerProps) => {
   const tokenLabel = formatTokenCount(tokenUsed, tokenLimit);
   const tokenPct = tokenLimit > 0 ? Math.min(100, (tokenUsed / tokenLimit) * 100) : 0;
@@ -188,6 +190,7 @@ export const Composer = ({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
+        disabled={disabled}
         style={{
           width: "100%",
           minHeight: 44,
@@ -223,6 +226,7 @@ export const Composer = ({
           aria-label="Attach file"
           title="Attach file"
           onClick={() => fileInputRef.current?.click()}
+          disabled={disabled}
           style={{
             display: "inline-flex",
             alignItems: "center",
@@ -232,7 +236,8 @@ export const Composer = ({
             background: "transparent",
             border: "none",
             color: "var(--color-text-muted)",
-            cursor: "pointer",
+            cursor: disabled ? "not-allowed" : "pointer",
+            opacity: disabled ? 0.5 : 1,
             padding: 0,
           }}
         >
