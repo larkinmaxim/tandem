@@ -17,6 +17,7 @@ interface TabsActions {
   closeTab: (sessionId: string) => void;
   switchTab: (sessionId: string) => void;
   newTab: () => string;
+  replaceTab: (oldId: string, newId: string) => void;
   hydrate: () => void;
 }
 
@@ -62,6 +63,9 @@ export const useTabsStore = create<TabsStore>((set, get) => {
       dispatch({ type: "OPEN_TAB", sessionId: draftId });
       return draftId;
     },
+
+    replaceTab: (oldId, newId) =>
+      dispatch({ type: "REPLACE_TAB", oldId, newId }),
 
     hydrate: () => {
       const restored = loadTabsState(sessionOrDraftExists);

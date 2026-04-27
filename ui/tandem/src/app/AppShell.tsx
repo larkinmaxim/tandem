@@ -9,6 +9,7 @@ import type { SectionId } from "@/features/sections/ui/SectionSwitcher";
 import { StubBody } from "@/features/sections/ui/StubBody";
 import { StatusBar } from "@/features/status/ui/StatusBar";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { ChatPane } from "@/features/chat/ui/ChatPane";
 import { TabBar, type TabDescriptor } from "@/features/tabs/ui/TabBar";
 import {
   DRAFT_TAB_PREFIX,
@@ -117,13 +118,16 @@ export const AppShell = () => {
         {isStubSection ? (
           <StubBody section={section} />
         ) : (
-          <TabBar
-            tabs={tabs}
-            activeId={tabActiveId}
-            onActivate={switchTab}
-            onClose={closeTab}
-            onNew={handleNewTab}
-          />
+          <>
+            <TabBar
+              tabs={tabs}
+              activeId={tabActiveId}
+              onActivate={switchTab}
+              onClose={closeTab}
+              onNew={handleNewTab}
+            />
+            <ChatPane />
+          </>
         )}
       </div>
       <div style={{ gridArea: "right", overflow: "hidden" }}>

@@ -1,25 +1,65 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/shared/api/acpConnection", () => ({
   getClient: vi.fn(() => new Promise(() => {})),
 }));
 
+const { mockAcpCreateSession, mockAcpSendMessage, mockResolvePath } =
+  vi.hoisted(() => ({
+    mockAcpCreateSession: vi.fn(),
+    mockAcpSendMessage: vi.fn(),
+    mockResolvePath: vi.fn(),
+  }));
+
+vi.mock("@/shared/api/acp", async (importActual) => {
+  const actual = await importActual<typeof import("@/shared/api/acp")>();
+  return {
+    ...actual,
+    acpCreateSession: mockAcpCreateSession,
+    acpSendMessage: mockAcpSendMessage,
+  };
+});
+
+vi.mock("@/shared/api/pathResolver", () => ({
+  resolvePath: mockResolvePath,
+}));
+
 import { AppShell } from "@/app/AppShell";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useToastStore } from "@/features/toasts/toastStore";
 import {
   DRAFT_TAB_PREFIX,
   useTabsStore,
 } from "@/features/tabs/stores/tabsStore";
+import { TABS_STORAGE_KEY } from "@/features/tabs/lib/tabPersistence";
+
+function seedTabs(openIds: string[], activeId: string | null) {
+  // Persist + setState so the AppShell hydrate effect restores the same shape
+  // instead of clobbering test setup with an empty localStorage read.
+  localStorage.setItem(
+    TABS_STORAGE_KEY,
+    JSON.stringify({ openIds, activeId }),
+  );
+  useTabsStore.setState({ openIds, activeId });
+}
 
 describe("AppShell", () => {
   beforeEach(() => {
     useChatSessionStore.setState({ sessions: [], activeSessionId: null });
+    useChatStore.setState({ messagesBySession: {}, sessionStateById: {} });
     useToastStore.setState({ toasts: [] });
     useTabsStore.setState({ openIds: [], activeId: null });
     localStorage.clear();
+    mockAcpCreateSession.mockReset();
+    mockAcpSendMessage.mockReset();
+    mockResolvePath.mockReset();
+    mockResolvePath.mockResolvedValue({
+      path: "/home/test/.goose/artifacts",
+    });
+    mockAcpSendMessage.mockResolvedValue(undefined);
   });
 
   it("renders all 5 zones", () => {
@@ -269,6 +309,287 @@ describe("AppShell", () => {
     await user.click(screen.getByTestId("left-pane-new-chat"));
     // chatSessionStore stays empty — no real session was created
     expect(useChatSessionStore.getState().sessions).toHaveLength(0);
+  });
+
+  describe("chat empty state", () => {
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it("shows the empty-state greeting in the main pane when the active tab is a draft with no messages", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 3, 27, 10, 0, 0)); // 10:00 AM local
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const empty = screen.getByTestId("chat-empty-state");
+      expect(empty).toBeInTheDocument();
+      expect(empty).toHaveTextContent(/Good morning/i);
+      expect(empty).toHaveTextContent(/What are we working on\?/i);
+    });
+
+    it("uses 'afternoon' between 12:00 and 17:59", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 3, 27, 14, 0, 0));
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-empty-state")).toHaveTextContent(
+        /Good afternoon/i,
+      );
+    });
+
+    it("uses 'evening' from 18:00 onward", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date(2026, 3, 27, 20, 0, 0));
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-empty-state")).toHaveTextContent(
+        /Good evening/i,
+      );
+    });
+
+    it("renders a multi-line textarea composer inside the empty state", () => {
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const composer = screen.getByTestId("chat-composer-input");
+      expect(composer.tagName).toBe("TEXTAREA");
+    });
+
+    it("renders the timeline (no empty state) when the active tab has messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.queryByTestId("chat-empty-state")).not.toBeInTheDocument();
+      const timeline = screen.getByTestId("chat-timeline");
+      expect(timeline).toHaveTextContent("hi");
+      expect(timeline).toHaveTextContent("hello back");
+    });
+
+    it("renders user initials on user messages and an assistant icon on assistant messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      const userAvatar = screen.getByTestId("chat-avatar-u1");
+      expect(userAvatar).toHaveAttribute("data-role", "user");
+      // DEFAULT_USER_NAME = "Maxim" → initials "M"
+      expect(userAvatar).toHaveTextContent("M");
+
+      const assistantAvatar = screen.getByTestId("chat-avatar-a1");
+      expect(assistantAvatar).toHaveAttribute("data-role", "assistant");
+      // Assistant avatar is an icon (svg), not text
+      expect(assistantAvatar.querySelector("svg")).toBeInTheDocument();
+    });
+
+    it("shows a typing indicator while the assistant is generating", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+        sessionStateById: {
+          "sess-1": {
+            chatState: "streaming",
+            tokenState: {
+              inputTokens: 0,
+              outputTokens: 0,
+              totalTokens: 0,
+              accumulatedInput: 0,
+              accumulatedOutput: 0,
+              accumulatedTotal: 0,
+              contextLimit: 0,
+            },
+            hasUsageSnapshot: false,
+            streamingMessageId: null,
+            pendingAssistantProviderId: null,
+            error: null,
+            hasUnread: false,
+          },
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-typing-indicator")).toBeInTheDocument();
+    });
+
+    it("hides the typing indicator when chatState is idle", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(
+        screen.queryByTestId("chat-typing-indicator"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("first send from a draft tab creates a session, replaces the tab id, and hard-swaps to the timeline", async () => {
+      const user = userEvent.setup();
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      mockAcpCreateSession.mockResolvedValue({
+        sessionId: "real-session-id",
+      });
+
+      render(<AppShell />);
+
+      const input = screen.getByTestId("chat-composer-input");
+      await user.type(input, "hello world");
+      await user.keyboard("{Enter}");
+
+      // Empty state gone, timeline showing the user's message
+      await waitFor(
+        () => {
+          expect(mockAcpCreateSession).toHaveBeenCalled();
+        },
+        { timeout: 3000 },
+      );
+      await waitFor(
+        () => {
+          expect(screen.queryByTestId("chat-empty-state")).not.toBeInTheDocument();
+        },
+        { timeout: 3000 },
+      );
+      const timeline = screen.getByTestId("chat-timeline");
+      expect(timeline).toHaveTextContent("hello world");
+
+      // Tab swapped to real session id
+      const { openIds, activeId } = useTabsStore.getState();
+      expect(openIds).toEqual(["real-session-id"]);
+      expect(activeId).toBe("real-session-id");
+
+      // Session in store, message persisted
+      const sessions = useChatSessionStore.getState().sessions;
+      expect(sessions.map((s) => s.id)).toContain("real-session-id");
+      const msgs =
+        useChatStore.getState().messagesBySession["real-session-id"] ?? [];
+      expect(msgs).toHaveLength(1);
+      expect(msgs[0].role).toBe("user");
+
+      // ACP prompt sent
+      expect(mockAcpSendMessage).toHaveBeenCalledWith(
+        "real-session-id",
+        "hello world",
+      );
+    });
   });
 
   it("clicking a tab close button removes the tab but keeps the session in history", async () => {
