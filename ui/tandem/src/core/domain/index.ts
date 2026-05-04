@@ -10,3 +10,8 @@ export type {
   ProviderCatalogEntry,
   ProviderStatus,
 } from "./Provider";
+export type {
+  SendMessageOptions,
+  PrepareSessionOptions,
+  SessionInfo,
+} from "./Chat";

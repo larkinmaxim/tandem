@@ -1,8 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatStore } from "../../stores/chatStore";
 import { useChatSessionStore } from "../../stores/chatSessionStore";
+import { installBackend, resetBackend } from "@/shared/sdk";
+import { buildInMemoryBackend } from "@/composition/buildBackend";
+import { GooseChatAdapter } from "@/infra/goose/GooseChatAdapter";
 
 const mockAcpSendMessage = vi.fn();
 const mockAcpCancelSession = vi.fn();
@@ -16,10 +19,18 @@ vi.mock("@/shared/api/acp", () => ({
   acpSetModel: (...args: unknown[]) => mockAcpSetModel(...args),
 }));
 
+vi.mock("@/shared/api/acpSessionTracker", () => ({
+  getGooseSessionId: vi.fn().mockReturnValue(null),
+}));
+
 import { useChat } from "../useChat";
 
 describe("useChat attachments", () => {
   beforeEach(() => {
+    installBackend({
+      ...buildInMemoryBackend(),
+      chat: new GooseChatAdapter(),
+    });
     vi.clearAllMocks();
     useChatStore.setState({
       messagesBySession: {},
@@ -49,6 +60,10 @@ describe("useChat attachments", () => {
     mockAcpCancelSession.mockResolvedValue(true);
     mockAcpPrepareSession.mockResolvedValue(undefined);
     mockAcpSetModel.mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    resetBackend();
   });
 
   it("stores non-image attachments in metadata and prepends path references to the prompt", async () => {

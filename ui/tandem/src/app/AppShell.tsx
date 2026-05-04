@@ -16,7 +16,7 @@ import { findExistingDraft } from "@/features/chat/lib/newChat";
 import { DEFAULT_CHAT_TITLE } from "@/features/chat/lib/sessionTitle";
 import { useAppStartup } from "./hooks/useAppStartup";
 import { AppShellContent } from "./ui/AppShellContent";
-import { acpPrepareSession } from "@/shared/api/acp";
+import { sdk } from "@/shared/sdk";
 import {
   clearReplayBuffer,
   getAndDeleteReplayBuffer,
@@ -321,7 +321,7 @@ export function AppShell({ children }: { children?: React.ReactNode }) {
         if (!workingDir) {
           return;
         }
-        await acpPrepareSession(
+        await sdk.chat.prepareSession(
           sessionId,
           session.providerId ?? agentStore.selectedProvider ?? "goose",
           workingDir,

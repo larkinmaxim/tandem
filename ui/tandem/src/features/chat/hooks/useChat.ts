@@ -10,14 +10,7 @@ import {
   getTextContent,
 } from "@/shared/types/messages";
 import type { ChatState, TokenState } from "@/shared/types/chat";
-import {
-  acpSendMessage,
-  acpCancelSession,
-  acpLoadSession,
-  acpPrepareSession,
-  acpSetModel,
-} from "@/shared/api/acp";
-import { getGooseSessionId } from "@/shared/api/acpSessionTracker";
+import { sdk } from "@/shared/sdk";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import {
   getSessionTitleFromDraft,
@@ -252,7 +245,7 @@ export function useChat(
       streamingPersonaIdRef.current = effectivePersonaInfo?.id ?? null;
 
       try {
-        const gooseSessionId = getGooseSessionId(
+        const gooseSessionId = sdk.chat.getGooseSessionId(
           sessionId,
           effectivePersonaInfo?.id,
         );
@@ -267,7 +260,7 @@ export function useChat(
           const workingDir = await getWorkingDir?.();
           if (workingDir) {
             const tPrep = performance.now();
-            await acpPrepareSession(sessionId, providerId, workingDir, {
+            await sdk.chat.prepareSession(sessionId, providerId, workingDir, {
               personaId: effectivePersonaInfo?.id,
             });
             perfLog(
@@ -280,7 +273,7 @@ export function useChat(
 
         if (selectedModelId) {
           const tModel = performance.now();
-          await acpSetModel(sessionId, selectedModelId);
+          await sdk.chat.setModel(sessionId, selectedModelId);
           perfLog(
             `[perf:send] ${sid} acpSetModel(${selectedModelId}) in ${(performance.now() - tModel).toFixed(1)}ms`,
           );
@@ -297,7 +290,7 @@ export function useChat(
         perfLog(
           `[perf:send] ${sid} → acpSendMessage (setup took ${(tAcp - tSendStart).toFixed(1)}ms)`,
         );
-        await acpSendMessage(sessionId, acpPrompt, {
+        await sdk.chat.send(sessionId, acpPrompt, {
           systemPrompt,
           personaId: effectivePersonaInfo?.id,
           personaName: effectivePersonaInfo?.name,
@@ -380,7 +373,7 @@ export function useChat(
     store.setStreamingMessageId(sessionId, null);
     store.setPendingAssistantProvider(sessionId, null);
     // Cancel the backend ACP session to stop orphaned streaming events
-    acpCancelSession(sessionId, activePersonaId ?? undefined)
+    sdk.chat.cancel(sessionId, activePersonaId ?? undefined)
       .then((wasCancelled) => {
         if (wasCancelled && activeStreamingMessageId) {
           markMessageStopped(sessionId, activeStreamingMessageId);
@@ -437,7 +430,7 @@ export function useChat(
     }
 
     const effectivePersonaInfo = resolvePersonaInfo();
-    let gooseSessionId = getGooseSessionId(
+    let gooseSessionId = sdk.chat.getGooseSessionId(
       sessionId,
       effectivePersonaInfo?.id,
     );
@@ -448,10 +441,10 @@ export function useChat(
         const agent = useAgentStore.getState().getActiveAgent();
         const providerId = providerOverride ?? agent?.provider ?? "goose";
 
-        await acpPrepareSession(sessionId, providerId, workingDir, {
+        await sdk.chat.prepareSession(sessionId, providerId, workingDir, {
           personaId: effectivePersonaInfo?.id,
         });
-        gooseSessionId = getGooseSessionId(sessionId, effectivePersonaInfo?.id);
+        gooseSessionId = sdk.chat.getGooseSessionId(sessionId, effectivePersonaInfo?.id);
       }
     }
 
@@ -477,14 +470,11 @@ export function useChat(
       const sendOptions = effectivePersonaInfo?.id
         ? { personaId: effectivePersonaInfo.id }
         : undefined;
-      await acpSendMessage(sessionId, MANUAL_COMPACT_TRIGGER, sendOptions);
+      await sdk.chat.send(sessionId, MANUAL_COMPACT_TRIGGER, sendOptions);
 
-      // Command responses are streamed via prompt notifications, but the ACP
-      // layer does not currently forward history replacement events. Drop those
-      // transient chunks and refresh the session from replay instead.
       clearReplayBuffer(sessionId);
       const workingDir = await getWorkingDir?.();
-      await acpLoadSession(sessionId, gooseSessionId, workingDir);
+      await sdk.chat.loadSession(sessionId, gooseSessionId, workingDir);
 
       store.setSessionLoading(sessionId, false);
 

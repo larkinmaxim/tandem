@@ -2,15 +2,18 @@ import type { SkillsPort } from "@/core/ports/SkillsPort";
 import type { ProviderCredentialsPort } from "@/core/ports/ProviderCredentialsPort";
 import type { AgentSetupPort } from "@/core/ports/AgentSetupPort";
 import type { ModelSetupPort } from "@/core/ports/ModelSetupPort";
+import type { ChatPort } from "@/core/ports/ChatPort";
 import { GooseConnection } from "@/infra/goose/GooseConnection";
 import { GooseSkillsAdapter } from "@/infra/goose/GooseSkillsAdapter";
 import { GooseProviderCredentialsAdapter } from "@/infra/goose/GooseProviderCredentialsAdapter";
 import { GooseAgentSetupAdapter } from "@/infra/goose/GooseAgentSetupAdapter";
 import { GooseModelSetupAdapter } from "@/infra/goose/GooseModelSetupAdapter";
+import { GooseChatAdapter } from "@/infra/goose/GooseChatAdapter";
 import { InMemorySkills } from "@/infra/test/InMemorySkills";
 import { InMemoryProviderCredentials } from "@/infra/test/InMemoryProviderCredentials";
 import { InMemoryAgentSetup } from "@/infra/test/InMemoryAgentSetup";
 import { InMemoryModelSetup } from "@/infra/test/InMemoryModelSetup";
+import { InMemoryChat } from "@/infra/test/InMemoryChat";
 import type { Skill } from "@/core/domain";
 
 export interface BackendContainer {
@@ -18,6 +21,7 @@ export interface BackendContainer {
   readonly providerCredentials: ProviderCredentialsPort;
   readonly agentSetup: AgentSetupPort;
   readonly modelSetup: ModelSetupPort;
+  readonly chat: ChatPort;
   readonly connection: GooseConnection | null;
 }
 
@@ -28,6 +32,7 @@ export function buildProductionBackend(): BackendContainer {
     providerCredentials: new GooseProviderCredentialsAdapter(),
     agentSetup: new GooseAgentSetupAdapter(),
     modelSetup: new GooseModelSetupAdapter(),
+    chat: new GooseChatAdapter(),
     connection,
   };
 }
@@ -44,6 +49,7 @@ export function buildInMemoryBackend(
     providerCredentials: new InMemoryProviderCredentials(),
     agentSetup: new InMemoryAgentSetup(),
     modelSetup: new InMemoryModelSetup(),
+    chat: new InMemoryChat(),
     connection: null,
   };
 }

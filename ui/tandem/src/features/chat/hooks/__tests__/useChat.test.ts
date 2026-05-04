@@ -1,10 +1,13 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatStore } from "../../stores/chatStore";
 import { useChatSessionStore } from "../../stores/chatSessionStore";
 import type { Message } from "@/shared/types/messages";
 import { clearReplayBuffer } from "../replayBuffer";
+import { installBackend, resetBackend } from "@/shared/sdk";
+import { buildInMemoryBackend } from "@/composition/buildBackend";
+import { GooseChatAdapter } from "@/infra/goose/GooseChatAdapter";
 
 const mockAcpSendMessage = vi.fn();
 const mockAcpCancelSession = vi.fn();
@@ -61,6 +64,10 @@ function createDeferredPromise<T = void>() {
 
 describe("useChat", () => {
   beforeEach(() => {
+    installBackend({
+      ...buildInMemoryBackend(),
+      chat: new GooseChatAdapter(),
+    });
     mockAcpSendMessage.mockReset();
     mockAcpCancelSession.mockReset();
     mockAcpLoadSession.mockReset();
@@ -117,6 +124,10 @@ describe("useChat", () => {
     mockAcpPrepareSession.mockResolvedValue(undefined);
     mockAcpSetModel.mockResolvedValue(undefined);
     mockGetGooseSessionId.mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    resetBackend();
   });
 
   it("cancels the active override persona instead of the hook default persona", async () => {

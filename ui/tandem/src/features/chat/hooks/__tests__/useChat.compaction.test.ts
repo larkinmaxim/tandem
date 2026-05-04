@@ -1,8 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Message } from "@/shared/types/messages";
 import { useChatStore } from "../../stores/chatStore";
 import { clearReplayBuffer, ensureReplayBuffer } from "../replayBuffer";
+import { installBackend, resetBackend } from "@/shared/sdk";
+import { buildInMemoryBackend } from "@/composition/buildBackend";
+import { GooseChatAdapter } from "@/infra/goose/GooseChatAdapter";
 
 const mockAcpSendMessage = vi.fn();
 const mockAcpLoadSession = vi.fn();
@@ -49,6 +52,10 @@ function createTextMessage(
 
 describe("useChat compaction", () => {
   beforeEach(() => {
+    installBackend({
+      ...buildInMemoryBackend(),
+      chat: new GooseChatAdapter(),
+    });
     mockAcpSendMessage.mockReset();
     mockAcpLoadSession.mockReset();
     mockGetGooseSessionId.mockReset();
@@ -63,6 +70,10 @@ describe("useChat compaction", () => {
     mockAcpSendMessage.mockResolvedValue(undefined);
     mockAcpLoadSession.mockResolvedValue(undefined);
     mockGetGooseSessionId.mockReturnValue(null);
+  });
+
+  afterEach(() => {
+    resetBackend();
   });
 
   it("reloads compacted history after sending the compact command", async () => {

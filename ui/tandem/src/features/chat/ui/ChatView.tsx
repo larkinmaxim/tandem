@@ -13,7 +13,7 @@ import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useProviderSelection } from "@/features/agents/hooks/useProviderSelection";
 import { useChatSessionStore } from "../stores/chatSessionStore";
 import { useProjectStore } from "@/features/projects/stores/projectStore";
-import { acpPrepareSession, acpSetModel } from "@/shared/api/acp";
+import { sdk } from "@/shared/sdk";
 import {
   buildProjectSystemPrompt,
   composeSystemPrompt,
@@ -200,7 +200,7 @@ export function ChatView({
       if (!workingDir) {
         return;
       }
-      await acpPrepareSession(activeSessionId, selectedProvider, workingDir, {
+      await sdk.chat.prepareSession(activeSessionId, selectedProvider, workingDir, {
         personaId: selectedPersonaId ?? undefined,
       });
     }
@@ -254,7 +254,7 @@ export function ChatView({
             return;
           }
 
-          await acpPrepareSession(
+          await sdk.chat.prepareSession(
             activeSessionId,
             selectedProvider,
             workingDir,
@@ -298,7 +298,7 @@ export function ChatView({
       if (session?.draft) {
         return;
       }
-      acpSetModel(activeSessionId, modelId).catch((error) => {
+      sdk.chat.setModel(activeSessionId, modelId).catch((error) => {
         console.error("Failed to set model:", error);
         useChatSessionStore.getState().updateSession(activeSessionId, {
           modelId: previousModelId,

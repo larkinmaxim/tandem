@@ -3,6 +3,7 @@ import type { SkillsPort } from "@/core/ports/SkillsPort";
 import type { ProviderCredentialsPort } from "@/core/ports/ProviderCredentialsPort";
 import type { AgentSetupPort } from "@/core/ports/AgentSetupPort";
 import type { ModelSetupPort } from "@/core/ports/ModelSetupPort";
+import type { ChatPort } from "@/core/ports/ChatPort";
 
 export { installBackend, useBackend, resetBackend } from "./install";
 
@@ -15,6 +16,7 @@ export interface ProvidersFacade {
 export interface Sdk {
   readonly skills: SkillsPort;
   readonly providers: ProvidersFacade;
+  readonly chat: ChatPort;
 }
 
 export const sdk: Sdk = {
@@ -34,5 +36,8 @@ export const sdk: Sdk = {
         return backend.modelSetup;
       },
     };
+  },
+  get chat(): ChatPort {
+    return useBackend().chat;
   },
 };
