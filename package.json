@@ -1,0 +1,8 @@
+{
+  "devDependencies": {
+    "@ai-hero/sandcastle": "github:larmax82/sandcastle#v0.5.7-cursor.9"
+  },
+  "scripts": {
+    "sandcastle": "npx tsx .sandcastle/main.mts"
+  }
+}
