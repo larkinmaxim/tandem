@@ -1,0 +1,5 @@
+{
+  "build": {
+    "beforeDevCommand": "npx vite --port 1520"
+  }
+}
