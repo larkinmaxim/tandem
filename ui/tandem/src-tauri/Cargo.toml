@@ -1,7 +1,7 @@
 [package]
-name = "goose2"
+name = "tandem"
 version = "0.1.0"
-description = "Goose desktop app"
+description = "Tandem desktop app"
 authors = ["you"]
 edition = "2021"
 
@@ -10,7 +10,7 @@ name = "goose-tauri"
 path = "src/main.rs"
 
 [lib]
-name = "goose2_lib"
+name = "tandem_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

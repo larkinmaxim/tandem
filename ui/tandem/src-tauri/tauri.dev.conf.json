@@ -1,6 +1,6 @@
 {
-  "identifier": "com.goose.app.dev",
-  "productName": "Goose Dev",
+  "identifier": "com.tandem.app.dev",
+  "productName": "Tandem Dev",
   "bundle": {
     "externalBin": []
   }

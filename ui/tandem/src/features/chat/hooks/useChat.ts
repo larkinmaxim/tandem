@@ -31,7 +31,7 @@ import {
   buildMessageAttachments,
 } from "../lib/attachments";
 
-// TODO: Remove this fallback once goose2 has first-class /-commands.
+// TODO: Remove this fallback once tandem has first-class /-commands.
 const MANUAL_COMPACT_TRIGGER = "/compact";
 
 function isManualCompactCommandMessage(message: Message): boolean {
