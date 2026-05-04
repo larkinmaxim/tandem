@@ -4,17 +4,24 @@ import {
   Composer,
   type ComposerAttachment,
 } from "@/features/chat/ui/Composer";
+import type { ModelOption } from "@/features/chat/ui/ModelPicker";
 
 export interface EmptyStateProps {
   name?: string;
   onSend?: (text: string, attachments: ComposerAttachment[]) => void;
   composerDisabled?: boolean;
+  selectedModelId?: string;
+  selectedModelName?: string;
+  onModelSelect?: (option: ModelOption) => void;
 }
 
 export const EmptyState = ({
   name = DEFAULT_USER_NAME,
   onSend,
   composerDisabled = false,
+  selectedModelId,
+  selectedModelName,
+  onModelSelect,
 }: EmptyStateProps) => {
   const tod = getTimeOfDay();
   return (
@@ -43,7 +50,13 @@ export const EmptyState = ({
         <br />
         <em>What are we working on?</em>
       </div>
-      <Composer onSend={onSend} disabled={composerDisabled} />
+      <Composer
+        onSend={onSend}
+        disabled={composerDisabled}
+        selectedModelId={selectedModelId}
+        selectedModelName={selectedModelName}
+        onModelSelect={onModelSelect}
+      />
     </div>
   );
 };

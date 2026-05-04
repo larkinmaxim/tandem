@@ -13,7 +13,7 @@ const COLOR: Record<ConnectionStatus, string> = {
 const TITLE: Record<ConnectionStatus, string> = {
   connected: "Connected to backend",
   connecting: "Connecting to backend…",
-  failed: "Backend unreachable",
+  failed: "Backend unreachable — check that goose serve is running and restart Tandem",
 };
 
 export const ConnectionIndicator = ({ status }: ConnectionIndicatorProps) => (

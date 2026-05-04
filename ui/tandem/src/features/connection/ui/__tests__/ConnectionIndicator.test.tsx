@@ -20,7 +20,7 @@ describe("ConnectionIndicator", () => {
     render(<ConnectionIndicator status="failed" />);
     const dot = screen.getByTestId("connection-dot");
     expect(dot).toHaveStyle({ background: "var(--color-danger)" });
-    expect(dot).toHaveAttribute("title", "Backend unreachable");
+    expect(dot).toHaveAttribute("title", "Backend unreachable — check that goose serve is running and restart Tandem");
   });
 
   it("explains the live state via title for screen readers when connected", () => {
