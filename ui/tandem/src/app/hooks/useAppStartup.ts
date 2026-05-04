@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
-import { setNotificationHandler, getClient } from "@/shared/api/acpConnection";
+import { setNotificationHandler } from "@/shared/api/acpConnection";
 import notificationHandler from "@/shared/api/acpNotificationHandler";
 import { perfLog } from "@/shared/lib/perfLog";
+import { sdk } from "@/shared/sdk";
 
 export function useAppStartup() {
   useEffect(() => {
@@ -13,9 +14,9 @@ export function useAppStartup() {
       try {
         const tConn = performance.now();
         setNotificationHandler(notificationHandler);
-        await getClient();
+        await sdk.connection.ensure();
         perfLog(
-          `[perf:startup] ACP getClient ready in ${(performance.now() - tConn).toFixed(1)}ms`,
+          `[perf:startup] ACP connection ready in ${(performance.now() - tConn).toFixed(1)}ms`,
         );
       } catch (err) {
         console.error("Failed to initialize ACP connection:", err);

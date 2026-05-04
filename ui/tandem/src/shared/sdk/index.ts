@@ -4,6 +4,7 @@ import type { ProviderCredentialsPort } from "@/core/ports/ProviderCredentialsPo
 import type { AgentSetupPort } from "@/core/ports/AgentSetupPort";
 import type { ModelSetupPort } from "@/core/ports/ModelSetupPort";
 import type { ChatPort } from "@/core/ports/ChatPort";
+import type { ConnectionPort } from "@/core/ports/ConnectionPort";
 
 export { installBackend, useBackend, resetBackend } from "./install";
 
@@ -17,6 +18,7 @@ export interface Sdk {
   readonly skills: SkillsPort;
   readonly providers: ProvidersFacade;
   readonly chat: ChatPort;
+  readonly connection: ConnectionPort;
 }
 
 export const sdk: Sdk = {
@@ -39,5 +41,8 @@ export const sdk: Sdk = {
   },
   get chat(): ChatPort {
     return useBackend().chat;
+  },
+  get connection(): ConnectionPort {
+    return useBackend().connection;
   },
 };

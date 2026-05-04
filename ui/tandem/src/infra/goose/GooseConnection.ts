@@ -9,18 +9,48 @@ import {
 } from "@agentclientprotocol/sdk";
 import { createWebSocketStream } from "@/shared/api/createWebSocketStream";
 import { perfLog } from "@/shared/lib/perfLog";
+import type { ConnectionPort } from "@/core/ports/ConnectionPort";
+import type { ConnectionState } from "@/core/domain/ConnectionState";
+import type { Subscription } from "@/core/domain/Subscription";
 
 export interface NotificationSink {
   handleSessionNotification(notification: SessionNotification): Promise<void>;
 }
 
-export class GooseConnection {
+type ConnectionListener = (state: ConnectionState) => void;
+
+export class GooseConnection implements ConnectionPort {
   private clientPromise: Promise<GooseClient> | null = null;
   private resolvedClient: GooseClient | null = null;
   private notificationSink: NotificationSink | null = null;
+  private currentState: ConnectionState = "idle";
+  private listeners = new Set<ConnectionListener>();
+
+  private setState(next: ConnectionState): void {
+    if (next === this.currentState) return;
+    this.currentState = next;
+    for (const listener of this.listeners) {
+      listener(next);
+    }
+  }
 
   setNotificationSink(sink: NotificationSink): void {
     this.notificationSink = sink;
+  }
+
+  state(): ConnectionState {
+    return this.currentState;
+  }
+
+  observe(listener: ConnectionListener): Subscription {
+    this.listeners.add(listener);
+    return {
+      unsubscribe: () => this.listeners.delete(listener),
+    };
+  }
+
+  async ensure(): Promise<void> {
+    await this.getClient();
   }
 
   async getClient(): Promise<GooseClient> {
@@ -28,13 +58,16 @@ export class GooseConnection {
 
     if (!this.clientPromise) {
       perfLog("[perf:conn] getClient() → initializing new ACP connection");
+      this.setState("connecting");
       this.clientPromise = this.initializeConnection()
         .then((client) => {
           this.resolvedClient = client;
+          this.setState("ready");
           return client;
         })
         .catch((error) => {
           this.clientPromise = null;
+          this.setState("error");
           throw error;
         });
     } else {
@@ -84,6 +117,7 @@ export class GooseConnection {
         );
         this.resolvedClient = null;
         this.clientPromise = null;
+        this.setState("closed");
       })
       .catch(() => {
         console.warn(
@@ -91,6 +125,7 @@ export class GooseConnection {
         );
         this.resolvedClient = null;
         this.clientPromise = null;
+        this.setState("error");
       });
   }
 

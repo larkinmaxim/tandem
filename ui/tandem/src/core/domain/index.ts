@@ -15,3 +15,4 @@ export type {
   PrepareSessionOptions,
   SessionInfo,
 } from "./Chat";
+export type { ConnectionState } from "./ConnectionState";

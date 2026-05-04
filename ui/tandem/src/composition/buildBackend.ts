@@ -3,6 +3,7 @@ import type { ProviderCredentialsPort } from "@/core/ports/ProviderCredentialsPo
 import type { AgentSetupPort } from "@/core/ports/AgentSetupPort";
 import type { ModelSetupPort } from "@/core/ports/ModelSetupPort";
 import type { ChatPort } from "@/core/ports/ChatPort";
+import type { ConnectionPort } from "@/core/ports/ConnectionPort";
 import { GooseConnection } from "@/infra/goose/GooseConnection";
 import { GooseSkillsAdapter } from "@/infra/goose/GooseSkillsAdapter";
 import { GooseProviderCredentialsAdapter } from "@/infra/goose/GooseProviderCredentialsAdapter";
@@ -14,6 +15,7 @@ import { InMemoryProviderCredentials } from "@/infra/test/InMemoryProviderCreden
 import { InMemoryAgentSetup } from "@/infra/test/InMemoryAgentSetup";
 import { InMemoryModelSetup } from "@/infra/test/InMemoryModelSetup";
 import { InMemoryChat } from "@/infra/test/InMemoryChat";
+import { InMemoryConnection } from "@/infra/test/InMemoryConnection";
 import type { Skill } from "@/core/domain";
 
 export interface BackendContainer {
@@ -22,7 +24,7 @@ export interface BackendContainer {
   readonly agentSetup: AgentSetupPort;
   readonly modelSetup: ModelSetupPort;
   readonly chat: ChatPort;
-  readonly connection: GooseConnection | null;
+  readonly connection: ConnectionPort;
 }
 
 export function buildProductionBackend(): BackendContainer {
@@ -50,6 +52,6 @@ export function buildInMemoryBackend(
     agentSetup: new InMemoryAgentSetup(),
     modelSetup: new InMemoryModelSetup(),
     chat: new InMemoryChat(),
-    connection: null,
+    connection: new InMemoryConnection(),
   };
 }

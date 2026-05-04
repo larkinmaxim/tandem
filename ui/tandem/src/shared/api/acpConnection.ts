@@ -15,11 +15,3 @@ export function setNotificationHandler(handler: AcpNotificationHandler): void {
 export async function getClient(): Promise<GooseClient> {
   return connection.getClient();
 }
-
-export function isClientReady(): boolean {
-  return connection.isReady();
-}
-
-export function getClientSync(): GooseClient | null {
-  return connection.getClientSync();
-}
