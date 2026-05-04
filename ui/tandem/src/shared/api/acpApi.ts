@@ -4,8 +4,14 @@ import type {
   LoadSessionResponse,
   PromptResponse,
 } from "@agentclientprotocol/sdk";
-import { getClient } from "./acpConnection";
+import { GooseConnection } from "@/infra/goose/GooseConnection";
 import { perfLog } from "@/shared/lib/perfLog";
+
+export const sharedConnection = new GooseConnection();
+
+export function getClient() {
+  return sharedConnection.getClient();
+}
 
 export interface AcpProvider {
   id: string;

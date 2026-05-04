@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockGetClient = vi.fn();
 
-vi.mock("@/shared/api/acpConnection", () => ({
+vi.mock("@/shared/api/acpApi", () => ({
   getClient: () => mockGetClient(),
 }));
 

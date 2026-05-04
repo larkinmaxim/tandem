@@ -5,7 +5,7 @@ import type { ModelSetupPort } from "@/core/ports/ModelSetupPort";
 import type { ChatPort } from "@/core/ports/ChatPort";
 import type { ConnectionPort } from "@/core/ports/ConnectionPort";
 import type { SessionEventsPort } from "@/core/ports/SessionEventsPort";
-import { sharedConnection } from "@/shared/api/acpConnection";
+import { sharedConnection } from "@/shared/api/acpApi";
 import { handleSessionNotification } from "@/shared/api/acpNotificationHandler";
 import { GooseSkillsAdapter } from "@/infra/goose/GooseSkillsAdapter";
 import { GooseProviderCredentialsAdapter } from "@/infra/goose/GooseProviderCredentialsAdapter";

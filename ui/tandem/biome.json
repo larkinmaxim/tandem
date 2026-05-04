@@ -26,6 +26,17 @@
       "recommended": true,
       "suspicious": {
         "noUnknownAtRules": "off"
+      },
+      "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "paths": {
+              "@aaif/goose-sdk": "Import @aaif/goose-sdk only from src/infra/goose/ (Ports & Adapters boundary).",
+              "@agentclientprotocol/sdk": "Import @agentclientprotocol/sdk only from src/infra/goose/ or src/shared/api/ (Ports & Adapters boundary)."
+            }
+          }
+        }
       }
     }
   },
@@ -43,6 +54,16 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["src/infra/goose/**", "src/shared/api/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["src/shared/styles/globals.css"],
       "linter": {

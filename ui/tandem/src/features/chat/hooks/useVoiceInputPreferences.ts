@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getClient } from "@/shared/api/acpConnection";
+import { getClient } from "@/shared/api/acpApi";
 import {
   DEFAULT_AUTO_SUBMIT_PHRASES_RAW,
   DISABLED_DICTATION_PROVIDER_CONFIG_VALUE,

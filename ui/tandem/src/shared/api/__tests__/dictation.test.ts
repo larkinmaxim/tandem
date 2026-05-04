@@ -9,9 +9,9 @@ import {
   saveDictationModelSelection,
   transcribeDictation,
 } from "../dictation";
-import { getClient } from "../acpConnection";
+import { getClient } from "../acpApi";
 
-vi.mock("../acpConnection", () => ({
+vi.mock("../acpApi", () => ({
   getClient: vi.fn(),
 }));
 

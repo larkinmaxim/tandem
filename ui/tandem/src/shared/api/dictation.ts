@@ -6,7 +6,7 @@ import type {
   DictationTranscribeResponse,
   WhisperModelStatus,
 } from "@/shared/types/dictation";
-import { getClient } from "./acpConnection";
+import { getClient } from "./acpApi";
 
 export async function getDictationConfig(): Promise<
   Record<DictationProvider, DictationProviderStatus>

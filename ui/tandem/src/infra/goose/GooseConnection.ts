@@ -7,7 +7,7 @@ import {
   type RequestPermissionRequest,
   type RequestPermissionResponse,
 } from "@agentclientprotocol/sdk";
-import { createWebSocketStream } from "@/shared/api/createWebSocketStream";
+import { createWebSocketStream } from "./createWebSocketStream";
 import { perfLog } from "@/shared/lib/perfLog";
 import type { ConnectionPort } from "@/core/ports/ConnectionPort";
 import type { ConnectionState } from "@/core/domain/ConnectionState";
