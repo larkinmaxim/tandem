@@ -1,9 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { installBackend, resetBackend } from "@/shared/sdk";
+import { buildInMemoryBackend } from "@/composition/buildBackend";
+import type { Skill } from "@/core/domain";
+import { InMemorySkills } from "@/infra/test/InMemorySkills";
 import { SkillsView } from "../SkillsView";
 
-const mockSkills = [
+const mockSkills: Skill[] = [
   {
     name: "code-review",
     description: "Reviews code",
@@ -18,27 +22,18 @@ const mockSkills = [
   },
 ];
 
-vi.mock("../../api/skills", () => ({
-  listSkills: vi.fn().mockResolvedValue([]),
-  createSkill: vi.fn().mockResolvedValue(undefined),
-  deleteSkill: vi.fn().mockResolvedValue(undefined),
-  updateSkill: vi.fn().mockResolvedValue(undefined),
-  exportSkill: vi
-    .fn()
-    .mockResolvedValue({ json: "{}", filename: "test.skill.json" }),
-  importSkills: vi.fn().mockResolvedValue([]),
-}));
-
-const { listSkills, deleteSkill } = (await import(
-  "../../api/skills"
-)) as unknown as {
-  listSkills: ReturnType<typeof vi.fn>;
-  deleteSkill: ReturnType<typeof vi.fn>;
-};
+let skillsAdapter: InMemorySkills;
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  listSkills.mockResolvedValue([]);
+  skillsAdapter = new InMemorySkills();
+  installBackend({
+    ...buildInMemoryBackend(),
+    skills: skillsAdapter,
+  });
+});
+
+afterEach(() => {
+  resetBackend();
 });
 
 describe("SkillsView", () => {
@@ -68,7 +63,9 @@ describe("SkillsView", () => {
     });
 
     it("renders skill cards when skills are loaded", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       render(<SkillsView />);
       expect(await screen.findByText("code-review")).toBeInTheDocument();
       expect(screen.getByText("test-writer")).toBeInTheDocument();
@@ -79,7 +76,9 @@ describe("SkillsView", () => {
 
   describe("Search", () => {
     it("filters skills by name when searching", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       const user = userEvent.setup();
       render(<SkillsView />);
       await screen.findByText("code-review");
@@ -94,7 +93,9 @@ describe("SkillsView", () => {
     });
 
     it("filters skills by description when searching", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       const user = userEvent.setup();
       render(<SkillsView />);
       await screen.findByText("code-review");
@@ -109,7 +110,9 @@ describe("SkillsView", () => {
     });
 
     it("shows empty state when search has no results", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       const user = userEvent.setup();
       render(<SkillsView />);
       await screen.findByText("code-review");
@@ -128,7 +131,9 @@ describe("SkillsView", () => {
 
   describe("Skill card menu", () => {
     it("shows dropdown menu with Edit, Duplicate, Export, Delete options", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       const user = userEvent.setup();
       render(<SkillsView />);
       await screen.findByText("code-review");
@@ -153,7 +158,9 @@ describe("SkillsView", () => {
 
   describe("Delete confirmation", () => {
     it("shows confirmation dialog when delete is clicked", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       const user = userEvent.setup();
       render(<SkillsView />);
       await screen.findByText("code-review");
@@ -168,7 +175,9 @@ describe("SkillsView", () => {
     });
 
     it("cancels deletion when Cancel is clicked", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       const user = userEvent.setup();
       render(<SkillsView />);
       await screen.findByText("code-review");
@@ -181,8 +190,10 @@ describe("SkillsView", () => {
       expect(screen.queryByText("Delete skill?")).not.toBeInTheDocument();
     });
 
-    it("calls deleteSkill API when confirmed", async () => {
-      listSkills.mockResolvedValue(mockSkills);
+    it("removes skill when delete is confirmed", async () => {
+      for (const s of mockSkills) {
+        await skillsAdapter.create(s);
+      }
       const user = userEvent.setup();
       render(<SkillsView />);
       await screen.findByText("code-review");
@@ -192,7 +203,7 @@ describe("SkillsView", () => {
       await user.click(screen.getByRole("button", { name: "Delete" }));
 
       await waitFor(() => {
-        expect(deleteSkill).toHaveBeenCalledWith("code-review");
+        expect(screen.queryByText("code-review")).not.toBeInTheDocument();
       });
     });
   });

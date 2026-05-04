@@ -5,7 +5,11 @@ import ReactDOM from "react-dom/client";
 import { App } from "@/app/App";
 import { I18nProvider } from "@/shared/i18n";
 import { ThemeProvider } from "@/shared/theme/ThemeProvider";
+import { installBackend } from "@/shared/sdk";
+import { buildProductionBackend } from "@/composition/buildBackend";
 import "@/shared/styles/globals.css";
+
+installBackend(buildProductionBackend());
 
 const queryClient = new QueryClient({
   defaultOptions: {

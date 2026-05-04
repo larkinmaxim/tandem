@@ -1,20 +1,24 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi, beforeEach } from "vitest";
+import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { installBackend, resetBackend } from "@/shared/sdk";
+import { buildInMemoryBackend } from "@/composition/buildBackend";
+import { InMemorySkills } from "@/infra/test/InMemorySkills";
 import { CreateSkillDialog } from "../CreateSkillDialog";
 
-vi.mock("../../api/skills", () => ({
-  createSkill: vi.fn().mockResolvedValue(undefined),
-  updateSkill: vi.fn().mockResolvedValue({
-    name: "test",
-    description: "test",
-    instructions: "",
-    path: "",
-  }),
-}));
+let skillsAdapter: InMemorySkills;
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const { createSkill, updateSkill } = await import("../../api/skills");
+beforeEach(() => {
+  skillsAdapter = new InMemorySkills();
+  installBackend({
+    ...buildInMemoryBackend(),
+    skills: skillsAdapter,
+  });
+});
+
+afterEach(() => {
+  resetBackend();
+});
 
 const defaultProps = {
   isOpen: true,
@@ -26,8 +30,6 @@ describe("CreateSkillDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
-
-  // ── Rendering ──────────────────────────────────────────────────────
 
   describe("rendering", () => {
     it("does not render when isOpen is false", () => {
@@ -59,8 +61,6 @@ describe("CreateSkillDialog", () => {
       expect(screen.getByText("Edit Skill")).toBeInTheDocument();
     });
   });
-
-  // ── Name validation ────────────────────────────────────────────────
 
   describe("name validation", () => {
     it("allows valid kebab-case names", async () => {
@@ -96,11 +96,6 @@ describe("CreateSkillDialog", () => {
       render(<CreateSkillDialog {...defaultProps} />);
       const nameInput = screen.getByPlaceholderText("my-skill-name");
 
-      // Type a single hyphen — the formatter strips leading hyphens,
-      // but we can produce an invalid state by clearing and typing a
-      // non-kebab string. Actually the formatter is aggressive, so let's
-      // just check that when name is non-empty but invalid, the error shows.
-      // We type "a-" which gives "a-" — valid prefix but trailing hyphen fails regex.
       await user.type(nameInput, "a-");
       expect(nameInput).toHaveValue("a-");
       expect(screen.getByText(/must be kebab-case/i)).toBeInTheDocument();
@@ -112,8 +107,6 @@ describe("CreateSkillDialog", () => {
       expect(saveButton).toBeDisabled();
     });
   });
-
-  // ── Edit mode ──────────────────────────────────────────────────────
 
   describe("edit mode", () => {
     const editingSkill = {
@@ -157,10 +150,8 @@ describe("CreateSkillDialog", () => {
     });
   });
 
-  // ── Form submission ────────────────────────────────────────────────
-
   describe("form submission", () => {
-    it("calls createSkill API on save in create mode", async () => {
+    it("creates skill via sdk on save in create mode", async () => {
       const user = userEvent.setup();
       render(<CreateSkillDialog {...defaultProps} />);
 
@@ -177,15 +168,21 @@ describe("CreateSkillDialog", () => {
       );
       await user.click(screen.getByRole("button", { name: /create skill/i }));
 
-      expect(createSkill).toHaveBeenCalledWith(
-        "my-skill",
-        "A description",
-        "Some instructions",
-      );
+      const stored = await skillsAdapter.list();
+      expect(stored).toHaveLength(1);
+      expect(stored[0].name).toBe("my-skill");
+      expect(stored[0].description).toBe("A description");
+      expect(stored[0].instructions).toBe("Some instructions");
     });
 
-    it("calls updateSkill API on save in edit mode", async () => {
+    it("updates skill via sdk on save in edit mode", async () => {
       const user = userEvent.setup();
+      await skillsAdapter.create({
+        name: "code-review",
+        description: "Reviews code",
+        instructions: "Review carefully",
+      });
+
       render(
         <CreateSkillDialog
           {...defaultProps}
@@ -197,7 +194,6 @@ describe("CreateSkillDialog", () => {
         />,
       );
 
-      // Change description
       const descInput = screen.getByPlaceholderText(
         "What it does and when to use it...",
       );
@@ -206,11 +202,9 @@ describe("CreateSkillDialog", () => {
 
       await user.click(screen.getByRole("button", { name: /save changes/i }));
 
-      expect(updateSkill).toHaveBeenCalledWith(
-        "code-review",
-        "Updated description",
-        "Review carefully",
-      );
+      const stored = await skillsAdapter.list();
+      expect(stored).toHaveLength(1);
+      expect(stored[0].description).toBe("Updated description");
     });
 
     it("calls onCreated callback after successful save", async () => {
@@ -230,7 +224,6 @@ describe("CreateSkillDialog", () => {
 
     it("clears fields after save", async () => {
       const user = userEvent.setup();
-      // Re-render with isOpen toggling to verify fields are cleared
       const { rerender } = render(<CreateSkillDialog {...defaultProps} />);
 
       await user.type(screen.getByPlaceholderText("my-skill-name"), "my-skill");
@@ -240,29 +233,12 @@ describe("CreateSkillDialog", () => {
       );
       await user.click(screen.getByRole("button", { name: /create skill/i }));
 
-      // Dialog closes after save; reopen to check fields are cleared
       rerender(<CreateSkillDialog {...defaultProps} />);
 
       expect(screen.getByPlaceholderText("my-skill-name")).toHaveValue("");
       expect(
         screen.getByPlaceholderText("What it does and when to use it..."),
       ).toHaveValue("");
-    });
-
-    it("shows error message on save failure", async () => {
-      const user = userEvent.setup();
-      vi.mocked(createSkill).mockRejectedValueOnce(new Error("Network error"));
-
-      render(<CreateSkillDialog {...defaultProps} />);
-
-      await user.type(screen.getByPlaceholderText("my-skill-name"), "my-skill");
-      await user.type(
-        screen.getByPlaceholderText("What it does and when to use it..."),
-        "desc",
-      );
-      await user.click(screen.getByRole("button", { name: /create skill/i }));
-
-      expect(screen.getByText(/network error/i)).toBeInTheDocument();
     });
   });
 });

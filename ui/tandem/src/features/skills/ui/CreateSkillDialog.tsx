@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
-import { createSkill, updateSkill } from "../api/skills";
+import { sdk } from "@/shared/sdk";
 
 const KEBAB_CASE_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
@@ -81,10 +81,15 @@ export function CreateSkillDialog({
     setSaving(true);
     setError(null);
     try {
+      const draft = {
+        name,
+        description: description.trim(),
+        instructions,
+      };
       if (isEditing) {
-        await updateSkill(name, description.trim(), instructions);
+        await sdk.skills.update(draft);
       } else {
-        await createSkill(name, description.trim(), instructions);
+        await sdk.skills.create(draft);
       }
       setName("");
       setDescription("");

@@ -31,14 +31,8 @@ import {
 } from "@/shared/ui/alert-dialog";
 import { useFileImportZone } from "@/shared/hooks/useFileImportZone";
 import { CreateSkillDialog } from "./CreateSkillDialog";
-import {
-  listSkills,
-  deleteSkill,
-  createSkill,
-  exportSkill,
-  importSkills,
-  type SkillInfo,
-} from "../api/skills";
+import { sdk } from "@/shared/sdk";
+import type { Skill } from "@/core/domain";
 
 function SkillCardMenu({
   skill,
@@ -47,11 +41,11 @@ function SkillCardMenu({
   onExport,
   onDelete,
 }: {
-  skill: SkillInfo;
-  onEdit: (skill: SkillInfo) => void;
-  onDuplicate: (skill: SkillInfo) => void;
-  onExport: (skill: SkillInfo) => void;
-  onDelete: (skill: SkillInfo) => void;
+  skill: Skill;
+  onEdit: (skill: Skill) => void;
+  onDuplicate: (skill: Skill) => void;
+  onExport: (skill: Skill) => void;
+  onDelete: (skill: Skill) => void;
 }) {
   const { t } = useTranslation(["skills", "common"]);
 
@@ -100,18 +94,17 @@ export function SkillsView() {
   const [editingSkill, setEditingSkill] = useState<
     { name: string; description: string; instructions: string } | undefined
   >(undefined);
-  const [skills, setSkills] = useState<SkillInfo[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [deletingSkill, setDeletingSkill] = useState<SkillInfo | null>(null);
+  const [deletingSkill, setDeletingSkill] = useState<Skill | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const loadSkills = useCallback(async () => {
     try {
-      const result = await listSkills();
+      const result = await sdk.skills.list();
       setSkills(result);
     } catch {
-      // skills directory may not exist yet
       setSkills([]);
     } finally {
       setLoading(false);
@@ -122,14 +115,14 @@ export function SkillsView() {
     loadSkills();
   }, [loadSkills]);
 
-  const handleDelete = (skill: SkillInfo) => {
+  const handleDelete = (skill: Skill) => {
     setDeletingSkill(skill);
   };
 
   const handleConfirmDeleteSkill = async () => {
     if (!deletingSkill) return;
     try {
-      await deleteSkill(deletingSkill.name);
+      await sdk.skills.remove(deletingSkill.name);
       await loadSkills();
     } catch {
       // best-effort
@@ -137,7 +130,7 @@ export function SkillsView() {
     setDeletingSkill(null);
   };
 
-  const handleEdit = (skill: SkillInfo) => {
+  const handleEdit = (skill: Skill) => {
     setEditingSkill({
       name: skill.name,
       description: skill.description,
@@ -146,7 +139,7 @@ export function SkillsView() {
     setDialogOpen(true);
   };
 
-  const handleDuplicate = async (skill: SkillInfo) => {
+  const handleDuplicate = async (skill: Skill) => {
     const existingNames = new Set(skills.map((s) => s.name));
     let copyName = `${skill.name}-copy`;
     let counter = 2;
@@ -155,16 +148,20 @@ export function SkillsView() {
       counter++;
     }
     try {
-      await createSkill(copyName, skill.description, skill.instructions);
+      await sdk.skills.create({
+        name: copyName,
+        description: skill.description,
+        instructions: skill.instructions,
+      });
       await loadSkills();
     } catch {
       // best-effort
     }
   };
 
-  const handleExport = async (skill: SkillInfo) => {
+  const handleExport = async (skill: Skill) => {
     try {
-      const result = await exportSkill(skill.name);
+      const result = await sdk.skills.exportSkill(skill.name);
       const blob = new Blob([result.json], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -189,7 +186,7 @@ export function SkillsView() {
       try {
         const arrayBuffer = await file.arrayBuffer();
         const bytes = Array.from(new Uint8Array(arrayBuffer));
-        await importSkills(bytes, file.name);
+        await sdk.skills.importSkills({ fileBytes: bytes, fileName: file.name });
         await loadSkills();
       } catch (err) {
         console.error("Failed to import skill:", err);
@@ -216,7 +213,7 @@ export function SkillsView() {
   const handleDropImport = useCallback(
     async (fileBytes: number[], fileName: string) => {
       try {
-        await importSkills(fileBytes, fileName);
+        await sdk.skills.importSkills({ fileBytes, fileName });
         await loadSkills();
       } catch (err) {
         console.error("Failed to import skill:", err);
