@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
@@ -9,6 +10,10 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "@": "/src",
+      "react-i18next": path.resolve(
+        __dirname,
+        "src/shared/lib/i18n-shim/react-i18next.ts",
+      ),
     },
   },
   clearScreen: false,

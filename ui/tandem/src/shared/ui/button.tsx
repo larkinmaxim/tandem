@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Slot } from "@radix-ui/react-slot";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/shared/lib/cn";
@@ -10,16 +11,22 @@ const buttonVariants = cva(
       variant: {
         default:
           "bg-[var(--color-accent)] text-[var(--color-accent-fg)] hover:bg-[var(--color-accent-hover)] active:bg-[var(--color-accent-active)]",
+        destructive:
+          "bg-[var(--color-danger)] text-white hover:bg-[var(--color-danger)]/90",
+        secondary:
+          "bg-[var(--color-surface)] text-[var(--color-text)] hover:bg-[var(--color-hover)]",
         ghost:
           "bg-transparent text-[var(--color-text)] hover:bg-[var(--color-hover)]",
         outline:
           "border border-[var(--color-border-strong)] bg-transparent text-[var(--color-text)] hover:bg-[var(--color-hover)]",
+        link: "text-[var(--color-accent)] underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2",
         sm: "h-8 px-3 text-xs",
         lg: "h-10 px-6",
         icon: "h-9 w-9",
+        "icon-sm": "h-7 w-7",
       },
     },
     defaultVariants: {
@@ -30,17 +37,22 @@ const buttonVariants = cva(
 );
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants>;
+  VariantProps<typeof buttonVariants> & {
+    asChild?: boolean;
+  };
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, ...props }, ref) => (
-    <button
-      ref={ref}
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size }), className)}
-      {...props}
-    />
-  ),
+  ({ className, variant, size, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : "button";
+    return (
+      <Comp
+        ref={ref}
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size }), className)}
+        {...props}
+      />
+    );
+  },
 );
 Button.displayName = "Button";
 
