@@ -13,6 +13,8 @@ import {
   X,
 } from "lucide-react";
 
+import { ModelPicker, type ModelOption } from "@/features/chat/ui/ModelPicker";
+
 export interface ComposerAttachment {
   name: string;
   mimeType: string;
@@ -27,6 +29,9 @@ export interface ComposerProps {
   tokenUsed?: number;
   tokenLimit?: number;
   disabled?: boolean;
+  selectedModelId?: string;
+  selectedModelName?: string;
+  onModelSelect?: (option: ModelOption) => void;
 }
 
 function formatTokenCount(used: number, limit: number): string {
@@ -77,6 +82,9 @@ export const Composer = ({
   tokenUsed = 0,
   tokenLimit = 0,
   disabled = false,
+  selectedModelId,
+  selectedModelName,
+  onModelSelect,
 }: ComposerProps) => {
   const tokenLabel = formatTokenCount(tokenUsed, tokenLimit);
   const tokenPct = tokenLimit > 0 ? Math.min(100, (tokenUsed / tokenLimit) * 100) : 0;
@@ -215,6 +223,12 @@ export const Composer = ({
           fontSize: 12,
         }}
       >
+        <ModelPicker
+          selectedModelId={selectedModelId}
+          selectedModelName={selectedModelName}
+          onSelect={onModelSelect ?? (() => {})}
+          disabled={disabled}
+        />
         <div data-testid="chat-composer-context-folder" style={chipStyle}>
           <Brain size={13} />
           <span>{contextFolder}</span>

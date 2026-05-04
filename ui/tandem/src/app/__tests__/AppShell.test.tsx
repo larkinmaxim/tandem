@@ -7,12 +7,17 @@ vi.mock("@/shared/api/acpConnection", () => ({
   setNotificationHandler: vi.fn(),
 }));
 
-const { mockAcpCreateSession, mockAcpSendMessage, mockResolvePath } =
-  vi.hoisted(() => ({
-    mockAcpCreateSession: vi.fn(),
-    mockAcpSendMessage: vi.fn(),
-    mockResolvePath: vi.fn(),
-  }));
+const {
+  mockAcpCreateSession,
+  mockAcpSendMessage,
+  mockAcpSetModel,
+  mockResolvePath,
+} = vi.hoisted(() => ({
+  mockAcpCreateSession: vi.fn(),
+  mockAcpSendMessage: vi.fn(),
+  mockAcpSetModel: vi.fn(),
+  mockResolvePath: vi.fn(),
+}));
 
 vi.mock("@/shared/api/acp", async (importActual) => {
   const actual = await importActual<typeof import("@/shared/api/acp")>();
@@ -20,6 +25,7 @@ vi.mock("@/shared/api/acp", async (importActual) => {
     ...actual,
     acpCreateSession: mockAcpCreateSession,
     acpSendMessage: mockAcpSendMessage,
+    acpSetModel: mockAcpSetModel,
   };
 });
 
@@ -86,6 +92,8 @@ describe("AppShell", () => {
     localStorage.clear();
     mockAcpCreateSession.mockReset();
     mockAcpSendMessage.mockReset();
+    mockAcpSetModel.mockReset();
+    mockAcpSetModel.mockResolvedValue(undefined);
     mockResolvePath.mockReset();
     mockResolvePath.mockResolvedValue({
       path: "/home/test/.goose/artifacts",
@@ -913,7 +921,250 @@ describe("AppShell", () => {
     expect(screen.getByTestId("tab-abc")).toBeInTheDocument();
     await user.click(screen.getByTestId("tab-close-abc"));
     expect(screen.queryByTestId("tab-abc")).not.toBeInTheDocument();
-    // Session still in history
     expect(screen.getByTestId("session-row-abc")).toBeInTheDocument();
+  });
+
+  describe("model picker (Phase 3b)", () => {
+    it("renders the model picker trigger in the composer footer", () => {
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("model-picker-trigger")).toBeInTheDocument();
+    });
+
+    it("shows 'Select model' when no model is set on the session", () => {
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("model-picker-trigger")).toHaveTextContent(
+        "Select model",
+      );
+    });
+
+    it("reflects the active session's model name", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+            modelId: "gpt-4o",
+            modelName: "GPT-4o",
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("model-picker-trigger")).toHaveTextContent(
+        "GPT-4o",
+      );
+    });
+
+    it("opens a dropdown with available models on click", async () => {
+      const user = userEvent.setup();
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+      useProviderInventoryStore.getState().setEntries([
+        {
+          providerId: "openai",
+          providerName: "OpenAI",
+          configured: true,
+          models: [
+            { id: "gpt-4o", name: "GPT-4o" },
+            { id: "gpt-4o-mini", name: "GPT-4o Mini" },
+          ],
+        } as never,
+      ]);
+
+      render(<AppShell />);
+
+      await user.click(screen.getByTestId("model-picker-trigger"));
+      expect(screen.getByTestId("model-picker-dropdown")).toBeInTheDocument();
+      expect(screen.getByTestId("model-option-gpt-4o")).toHaveTextContent(
+        "GPT-4o",
+      );
+      expect(screen.getByTestId("model-option-gpt-4o-mini")).toHaveTextContent(
+        "GPT-4o Mini",
+      );
+    });
+
+    it("selecting a model updates the session store", async () => {
+      const user = userEvent.setup();
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+      useProviderInventoryStore.getState().setEntries([
+        {
+          providerId: "anthropic",
+          providerName: "Anthropic",
+          configured: true,
+          models: [
+            { id: "claude-4-opus", name: "Claude Opus 4" },
+          ],
+        } as never,
+      ]);
+
+      render(<AppShell />);
+
+      await user.click(screen.getByTestId("model-picker-trigger"));
+      await user.click(screen.getByTestId("model-option-claude-4-opus"));
+
+      const session = useChatSessionStore
+        .getState()
+        .sessions.find((s) => s.id === "sess-1");
+      expect(session?.modelId).toBe("claude-4-opus");
+      expect(session?.modelName).toBe("Claude Opus 4");
+    });
+
+    it("switching tabs shows the correct session's model", () => {
+      seedTabs(["sess-a", "sess-b"], "sess-a");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-a",
+            title: "Chat A",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+            modelId: "gpt-4o",
+            modelName: "GPT-4o",
+          },
+          {
+            id: "sess-b",
+            title: "Chat B",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+            modelId: "claude-4-opus",
+            modelName: "Claude Opus 4",
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-a": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+          "sess-b": [
+            {
+              id: "u2",
+              role: "user",
+              created: 2,
+              content: [{ type: "text", text: "hello" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("model-picker-trigger")).toHaveTextContent(
+        "GPT-4o",
+      );
+
+      act(() => {
+        useTabsStore.setState({ activeId: "sess-b" });
+      });
+
+      expect(screen.getByTestId("model-picker-trigger")).toHaveTextContent(
+        "Claude Opus 4",
+      );
+    });
+
+    it("status bar model name updates when the active session model changes", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+            modelName: "GPT-4o",
+          },
+        ],
+        activeSessionId: "sess-1",
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("status-item-model")).toHaveTextContent(
+        "GPT-4o",
+      );
+
+      act(() => {
+        useChatSessionStore.getState().updateSession("sess-1", {
+          modelName: "Claude Opus 4",
+        });
+      });
+
+      expect(screen.getByTestId("status-item-model")).toHaveTextContent(
+        "Claude Opus 4",
+      );
+    });
   });
 });
