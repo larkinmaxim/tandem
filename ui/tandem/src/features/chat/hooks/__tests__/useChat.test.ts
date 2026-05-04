@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
 
+vi.mock("@/shared/api/acpConnection", () => ({
+  getClient: vi.fn(() => new Promise(() => {})),
+  setNotificationHandler: vi.fn(),
+}));
+
 const { mockAcpSendMessage, mockResolvePath } = vi.hoisted(() => ({
   mockAcpSendMessage: vi.fn(),
   mockResolvePath: vi.fn(),

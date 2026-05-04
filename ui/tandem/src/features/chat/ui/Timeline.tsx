@@ -1,10 +1,22 @@
 import { Sparkles } from "lucide-react";
+import { StickToBottom } from "use-stick-to-bottom";
 
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { getUserInitials } from "@/features/chat/lib/userIdentity";
-import { getTextContent, type Message } from "@/shared/types/messages";
+import {
+  getTextContent,
+  isTextContent,
+  isToolRequest,
+  isToolResponse,
+  isThinking,
+  isReasoning,
+  type Message,
+  type MessageContent,
+  type ToolRequestContent,
+  type ToolResponseContent,
+} from "@/shared/types/messages";
 import type { ChatState } from "@/shared/types/chat";
 
 const FALLBACK_PERSONA_NAME = "Tandem";
@@ -41,22 +53,22 @@ export const Timeline = ({ sessionId }: TimelineProps) => {
   const showTypingIndicator = ASSISTANT_BUSY_STATES.has(chatState);
 
   return (
-    <div
+    <StickToBottom
+      className="relative flex-1 overflow-y-hidden"
+      initial="smooth"
+      resize="smooth"
+      role="log"
       data-testid="chat-timeline"
-      style={{
-        flex: 1,
-        overflow: "auto",
-        padding: 16,
-        display: "flex",
-        flexDirection: "column",
-        gap: 12,
-      }}
     >
-      {messages.map((m) => (
-        <MessageRow key={m.id} message={m} personaName={personaName} />
-      ))}
-      {showTypingIndicator && <TypingIndicator />}
-    </div>
+      <StickToBottom.Content
+        className="flex flex-col gap-3 p-4"
+      >
+        {messages.map((m) => (
+          <MessageRow key={m.id} message={m} personaName={personaName} />
+        ))}
+        {showTypingIndicator && <TypingIndicator />}
+      </StickToBottom.Content>
+    </StickToBottom>
   );
 };
 
@@ -139,6 +151,62 @@ const Avatar = ({ message }: { message: Message }) => {
   );
 };
 
+const ToolBlock = ({ content }: { content: ToolRequestContent }) => (
+  <details
+    className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] text-sm"
+    data-testid={`chat-tool-${content.id}`}
+  >
+    <summary className="cursor-pointer px-3 py-2 font-medium text-[var(--color-text-secondary)]">
+      {content.name}
+      {content.status === "completed" && (
+        <span className="ml-2 text-xs text-[var(--color-success)]">✓</span>
+      )}
+      {content.status === "error" && (
+        <span className="ml-2 text-xs text-[var(--color-danger)]">✗</span>
+      )}
+    </summary>
+    <div className="border-t border-[var(--color-border)] px-3 py-2">
+      <pre className="overflow-auto whitespace-pre-wrap text-xs font-[var(--font-mono)] text-[var(--color-text-muted)]">
+        {JSON.stringify(content.arguments, null, 2)}
+      </pre>
+    </div>
+  </details>
+);
+
+const ToolResponseBlock = ({ content }: { content: ToolResponseContent }) => (
+  <div
+    className="rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs"
+    data-testid={`chat-tool-response-${content.id}`}
+  >
+    <pre className="overflow-auto whitespace-pre-wrap font-[var(--font-mono)] text-[var(--color-text-muted)]">
+      {content.result}
+    </pre>
+  </div>
+);
+
+const ThinkingBlock = ({ text }: { text: string }) => (
+  <details className="text-sm text-[var(--color-text-muted)]" data-testid="chat-thinking">
+    <summary className="cursor-pointer font-medium">Thinking...</summary>
+    <div className="mt-1 whitespace-pre-wrap pl-4 text-xs opacity-75">{text}</div>
+  </details>
+);
+
+const ContentBlock = ({ block }: { block: MessageContent }) => {
+  if (isTextContent(block)) {
+    return (
+      <div className="prose prose-sm max-w-none font-[var(--font-reading)] text-[var(--color-text)] leading-relaxed [&_code]:rounded [&_code]:bg-[var(--color-surface)] [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:font-[var(--font-mono)] [&_code]:text-xs [&_pre]:overflow-auto [&_pre]:rounded-md [&_pre]:bg-[var(--color-surface)] [&_pre]:p-3 [&_pre]:font-[var(--font-mono)] [&_pre]:text-xs">
+        {block.text}
+      </div>
+    );
+  }
+  if (isToolRequest(block)) return <ToolBlock content={block} />;
+  if (isToolResponse(block)) return <ToolResponseBlock content={block} />;
+  if (isThinking(block) || isReasoning(block)) {
+    return <ThinkingBlock text={block.text} />;
+  }
+  return null;
+};
+
 const MessageRow = ({
   message,
   personaName,
@@ -147,24 +215,17 @@ const MessageRow = ({
   personaName: string;
 }) => {
   const isAssistant = message.role === "assistant";
+  const textOnly =
+    message.content.length === 1 && isTextContent(message.content[0]);
+
   return (
     <div
       data-testid={`chat-message-${message.role}`}
       data-message-id={message.id}
-      style={{
-        display: "flex",
-        gap: 10,
-        alignItems: "flex-start",
-      }}
+      className="flex gap-2.5 items-start"
     >
       <Avatar message={message} />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          minWidth: 0,
-        }}
-      >
+      <div className="min-w-0 flex-1 space-y-2 pt-1">
         {isAssistant && (
           <div
             data-testid={`chat-message-persona-${message.id}`}
@@ -179,17 +240,15 @@ const MessageRow = ({
             {personaName}
           </div>
         )}
-        <div
-          style={{
-            fontFamily: "var(--font-reading)",
-            color: "var(--color-text)",
-            whiteSpace: "pre-wrap",
-            lineHeight: 1.55,
-            paddingTop: isAssistant ? 0 : 4,
-          }}
-        >
-          {getTextContent(message)}
-        </div>
+        {textOnly ? (
+          <div className="font-[var(--font-reading)] text-[var(--color-text)] whitespace-pre-wrap leading-relaxed">
+            {getTextContent(message)}
+          </div>
+        ) : (
+          message.content.map((block, i) => (
+            <ContentBlock key={`${message.id}-${i}`} block={block} />
+          ))
+        )}
       </div>
     </div>
   );

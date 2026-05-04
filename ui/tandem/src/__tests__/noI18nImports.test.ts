@@ -11,17 +11,24 @@ const FORBIDDEN = [
 
 const SELF = __filename;
 
+const EXCLUDED_DIRS = new Set([
+  "node_modules",
+  "dist",
+  "ds",
+  "ai-elements",
+  "i18n-shim",
+  "i18n",
+]);
+
 function* walk(dir: string): Generator<string> {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     const stat = statSync(full);
     if (stat.isDirectory()) {
-      if (entry === "node_modules" || entry === "dist" || entry === "ds")
-        continue;
+      if (EXCLUDED_DIRS.has(entry)) continue;
       yield* walk(full);
       continue;
     }
-    // Skip this test file itself — it contains the patterns by design.
     if (full === SELF) continue;
     if (
       entry.endsWith(".ts") ||

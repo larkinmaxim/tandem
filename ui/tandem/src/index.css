@@ -4,6 +4,7 @@
 /* Map Tandem CSS variables into Tailwind's @theme so utility classes
  * (e.g. bg-bg, text-text, font-ui, font-mono) resolve to the same tokens. */
 @theme {
+  /* Tandem design tokens */
   --color-bg: var(--color-bg);
   --color-canvas: var(--color-canvas);
   --color-surface: var(--color-surface);
@@ -26,6 +27,28 @@
   --font-ui: var(--font-ui);
   --font-reading: var(--font-reading);
   --font-mono: var(--font-mono);
+
+  /* Compatibility aliases for goose2 Tailwind semantic tokens.
+     Maps shadcn/ui-style tokens to Tandem design tokens so ported
+     ai-element renderers (38 keeping goose2 Tailwind classes) render correctly. */
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --color-muted: var(--color-surface);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-popover: var(--color-surface-raised);
+  --color-popover-foreground: var(--color-text);
+  --color-card: var(--color-surface);
+  --color-card-foreground: var(--color-text);
+  --color-primary: var(--color-accent);
+  --color-primary-foreground: var(--color-accent-fg, #ffffff);
+  --color-secondary: var(--color-surface-raised);
+  --color-secondary-foreground: var(--color-text);
+  --color-accent-foreground: var(--color-text);
+  --color-destructive: var(--color-danger);
+  --color-destructive-foreground: #ffffff;
+  --color-ring: var(--color-accent);
+  --color-input: var(--color-border);
+  --color-focus-ring: var(--color-accent);
 }
 
 html,
