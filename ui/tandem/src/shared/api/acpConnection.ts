@@ -83,7 +83,7 @@ async function initializeConnection(): Promise<GooseClient> {
     protocolVersion: PROTOCOL_VERSION,
     clientCapabilities: {},
     clientInfo: {
-      name: "goose2",
+      name: "tandem",
       version: "0.1.0",
     },
   });

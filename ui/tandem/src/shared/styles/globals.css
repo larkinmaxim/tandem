@@ -240,7 +240,7 @@
   --duration-normal: 0.2s;
   --duration-slow: 0.4s;
 
-  /* goose2 custom — brand accent + density */
+  /* tandem custom — brand accent + density */
   --color-brand: #8b7cff;
   --color-brand-foreground: #16171b;
   --density-spacing: 1;
@@ -786,7 +786,7 @@ body,
 }
 
 /* ═══════════════════════════════════════════════════════════
-   goose2 custom utilities
+   tandem custom utilities
    ═══════════════════════════════════════════════════════════ */
 
 /* Density-aware spacing utilities */
