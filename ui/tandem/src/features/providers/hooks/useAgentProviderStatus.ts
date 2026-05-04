@@ -1,8 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import {
-  checkAgentInstalled,
-  checkAgentAuth,
-} from "@/features/providers/api/agentSetup";
+import { sdk } from "@/shared/sdk";
 import {
   getAgentProviders,
   getCatalogEntry,
@@ -29,13 +26,13 @@ async function checkAgentProviderReady(providerId: string): Promise<boolean> {
   }
 
   try {
-    const installed = await checkAgentInstalled(provider.id);
+    const installed = await sdk.providers.agentSetup.checkInstalled(provider.id);
     if (!installed) {
       return false;
     }
 
     if (provider.authStatusCommand) {
-      return checkAgentAuth(provider.id);
+      return sdk.providers.agentSetup.checkAuth(provider.id);
     }
 
     if (provider.authCommand) {

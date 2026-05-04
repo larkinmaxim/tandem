@@ -15,10 +15,7 @@ import {
   formatProviderLabel,
 } from "@/shared/ui/icons/ProviderIcons";
 import { IconCheck } from "@tabler/icons-react";
-import {
-  authenticateModelProvider,
-  onModelSetupOutput,
-} from "@/features/providers/api/modelSetup";
+import { sdk } from "@/shared/sdk";
 import type {
   ProviderDisplayInfo,
   ProviderField,
@@ -158,10 +155,10 @@ export function ModelProviderRow({
     setShowSavedState(false);
     setPreserveSetupLayout(false);
 
-    const unlisten = await onModelSetupOutput(provider.id, appendSetupOutput);
+    const unlisten = await sdk.providers.modelSetup.onSetupOutput(provider.id, appendSetupOutput);
 
     try {
-      await authenticateModelProvider(provider.id, provider.nativeConnectQuery);
+      await sdk.providers.modelSetup.authenticate(provider.id, provider.nativeConnectQuery);
       await onCompleteNativeSetup();
     } catch (nextError) {
       setSetupError(

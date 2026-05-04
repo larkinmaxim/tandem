@@ -1,13 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import {
-  getProviderConfig,
-  saveProviderField,
-  deleteProviderConfig,
-  type ProviderStatus,
-  checkAllProviderStatus,
-  restartApp,
-} from "@/features/providers/api/credentials";
-import type { ProviderFieldValue } from "@/shared/types/providers";
+import { sdk } from "@/shared/sdk";
+import type { ProviderFieldValue, ProviderStatus } from "@/core/domain";
 
 interface UseCredentialsReturn {
   configuredIds: Set<string>;
@@ -28,7 +21,7 @@ export function useCredentials(): UseCredentialsReturn {
   const [needsRestart, setNeedsRestart] = useState(false);
 
   const refreshStatuses = useCallback(async () => {
-    const nextStatuses = await checkAllProviderStatus();
+    const nextStatuses = await sdk.providers.credentials.checkAllStatus();
     setStatuses(nextStatuses);
     return nextStatuses;
   }, []);
@@ -46,14 +39,14 @@ export function useCredentials(): UseCredentialsReturn {
   );
 
   const getConfig = useCallback(async (providerId: string) => {
-    return getProviderConfig(providerId);
+    return sdk.providers.credentials.getConfig(providerId);
   }, []);
 
   const save = useCallback(
     async (key: string, value: string) => {
       setSaving(true);
       try {
-        await saveProviderField(key, value);
+        await sdk.providers.credentials.saveField(key, value);
         await refreshStatuses();
         setNeedsRestart(true);
       } finally {
@@ -67,7 +60,7 @@ export function useCredentials(): UseCredentialsReturn {
     async (providerId: string) => {
       setSaving(true);
       try {
-        await deleteProviderConfig(providerId);
+        await sdk.providers.credentials.deleteConfig(providerId);
         await refreshStatuses();
         setNeedsRestart(true);
       } finally {
@@ -78,7 +71,7 @@ export function useCredentials(): UseCredentialsReturn {
   );
 
   const restart = useCallback(async () => {
-    await restartApp();
+    await sdk.providers.credentials.restartApp();
   }, []);
 
   const completeNativeSetup = useCallback(async () => {

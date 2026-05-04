@@ -5,13 +5,7 @@ import { Button } from "@/shared/ui/button";
 import { Spinner } from "@/shared/ui/spinner";
 import { getProviderIcon } from "@/shared/ui/icons/ProviderIcons";
 import { IconCheck, IconAlertTriangle, IconPlus } from "@tabler/icons-react";
-import {
-  checkAgentInstalled,
-  checkAgentAuth,
-  installAgent,
-  authenticateAgent,
-  onAgentSetupOutput,
-} from "@/features/providers/api/agentSetup";
+import { sdk } from "@/shared/sdk";
 import type { ProviderDisplayInfo } from "@/shared/types/providers";
 
 type SetupPhase = "idle" | "checking" | "installing" | "authenticating";
@@ -80,12 +74,12 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
   useEffect(() => {
     if (!hasBinary || isBuiltIn || !provider.binaryName) return;
 
-    checkAgentInstalled(provider.id)
+    sdk.providers.agentSetup.checkInstalled(provider.id)
       .then((installed) => {
         if (!isMountedRef.current) return;
         setIsInstalled(installed);
         if (installed && provider.authStatusCommand) {
-          return checkAgentAuth(provider.id).then((authenticated) => {
+          return sdk.providers.agentSetup.checkAuth(provider.id).then((authenticated) => {
             if (!isMountedRef.current) return;
             setIsAuthenticated(authenticated);
           });
@@ -147,7 +141,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     setSetupPhase("installing");
 
     clearListener();
-    const unlisten = await onAgentSetupOutput(provider.id, appendOutput);
+    const unlisten = await sdk.providers.agentSetup.onSetupOutput(provider.id, appendOutput);
     if (!isMountedRef.current) {
       unlisten();
       return;
@@ -155,13 +149,13 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     unlistenRef.current = unlisten;
 
     try {
-      await installAgent(provider.id);
+      await sdk.providers.agentSetup.install(provider.id);
       clearListener();
       if (!isMountedRef.current) return;
 
       if (hasBinary && provider.binaryName) {
         setSetupPhase("checking");
-        const installed = await checkAgentInstalled(provider.binaryName);
+        const installed = await sdk.providers.agentSetup.checkInstalled(provider.binaryName);
         if (!isMountedRef.current) return;
         setIsInstalled(installed);
         if (!installed) {
@@ -194,7 +188,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     setSetupOutput([]);
 
     clearListener();
-    const unlisten = await onAgentSetupOutput(provider.id, appendOutput);
+    const unlisten = await sdk.providers.agentSetup.onSetupOutput(provider.id, appendOutput);
     if (!isMountedRef.current) {
       unlisten();
       return;
@@ -202,7 +196,7 @@ export function AgentProviderCard({ provider }: AgentProviderCardProps) {
     unlistenRef.current = unlisten;
 
     try {
-      await authenticateAgent(provider.id);
+      await sdk.providers.agentSetup.authenticate(provider.id);
       clearListener();
       if (!isMountedRef.current) return;
       setAuthHint(true);
