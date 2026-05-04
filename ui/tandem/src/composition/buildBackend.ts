@@ -4,18 +4,22 @@ import type { AgentSetupPort } from "@/core/ports/AgentSetupPort";
 import type { ModelSetupPort } from "@/core/ports/ModelSetupPort";
 import type { ChatPort } from "@/core/ports/ChatPort";
 import type { ConnectionPort } from "@/core/ports/ConnectionPort";
-import { GooseConnection } from "@/infra/goose/GooseConnection";
+import type { SessionEventsPort } from "@/core/ports/SessionEventsPort";
+import { sharedConnection } from "@/shared/api/acpConnection";
+import { handleSessionNotification } from "@/shared/api/acpNotificationHandler";
 import { GooseSkillsAdapter } from "@/infra/goose/GooseSkillsAdapter";
 import { GooseProviderCredentialsAdapter } from "@/infra/goose/GooseProviderCredentialsAdapter";
 import { GooseAgentSetupAdapter } from "@/infra/goose/GooseAgentSetupAdapter";
 import { GooseModelSetupAdapter } from "@/infra/goose/GooseModelSetupAdapter";
 import { GooseChatAdapter } from "@/infra/goose/GooseChatAdapter";
+import { GooseSessionEventsAdapter } from "@/infra/goose/GooseSessionEventsAdapter";
 import { InMemorySkills } from "@/infra/test/InMemorySkills";
 import { InMemoryProviderCredentials } from "@/infra/test/InMemoryProviderCredentials";
 import { InMemoryAgentSetup } from "@/infra/test/InMemoryAgentSetup";
 import { InMemoryModelSetup } from "@/infra/test/InMemoryModelSetup";
 import { InMemoryChat } from "@/infra/test/InMemoryChat";
 import { InMemoryConnection } from "@/infra/test/InMemoryConnection";
+import { InMemorySessionEvents } from "@/infra/test/InMemorySessionEvents";
 import type { Skill } from "@/core/domain";
 
 export interface BackendContainer {
@@ -25,17 +29,18 @@ export interface BackendContainer {
   readonly modelSetup: ModelSetupPort;
   readonly chat: ChatPort;
   readonly connection: ConnectionPort;
+  readonly events: SessionEventsPort;
 }
 
 export function buildProductionBackend(): BackendContainer {
-  const connection = new GooseConnection();
   return {
     skills: new GooseSkillsAdapter(),
     providerCredentials: new GooseProviderCredentialsAdapter(),
     agentSetup: new GooseAgentSetupAdapter(),
     modelSetup: new GooseModelSetupAdapter(),
     chat: new GooseChatAdapter(),
-    connection,
+    connection: sharedConnection,
+    events: new GooseSessionEventsAdapter(sharedConnection, handleSessionNotification),
   };
 }
 
@@ -53,5 +58,6 @@ export function buildInMemoryBackend(
     modelSetup: new InMemoryModelSetup(),
     chat: new InMemoryChat(),
     connection: new InMemoryConnection(),
+    events: new InMemorySessionEvents(),
   };
 }

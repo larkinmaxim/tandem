@@ -1,8 +1,6 @@
 import { useEffect } from "react";
 import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
-import { setNotificationHandler } from "@/shared/api/acpConnection";
-import notificationHandler from "@/shared/api/acpNotificationHandler";
 import { perfLog } from "@/shared/lib/perfLog";
 import { sdk } from "@/shared/sdk";
 
@@ -13,7 +11,6 @@ export function useAppStartup() {
       perfLog("[perf:startup] useAppStartup begin");
       try {
         const tConn = performance.now();
-        setNotificationHandler(notificationHandler);
         await sdk.connection.ensure();
         perfLog(
           `[perf:startup] ACP connection ready in ${(performance.now() - tConn).toFixed(1)}ms`,

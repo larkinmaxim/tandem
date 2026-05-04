@@ -16,3 +16,15 @@ export type {
   SessionInfo,
 } from "./Chat";
 export type { ConnectionState } from "./ConnectionState";
+export type {
+  SessionEvent,
+  SessionEventKind,
+  AgentMessageChunkEvent,
+  UserMessageChunkEvent,
+  ToolCallStartedEvent,
+  ToolCallUpdateEvent,
+  SessionInfoUpdateEvent,
+  ConfigOptionUpdateEvent,
+  UsageUpdateEvent,
+  TurnEndedEvent,
+} from "./SessionEvent";

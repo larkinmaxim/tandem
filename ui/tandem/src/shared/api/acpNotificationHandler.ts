@@ -13,7 +13,6 @@ import type {
   ToolRequestContent,
   ToolResponseContent,
 } from "@/shared/types/messages";
-import type { AcpNotificationHandler } from "./acpConnection";
 import {
   getLocalSessionId,
   subscribeToSessionRegistration,
@@ -534,9 +533,3 @@ function extractToolResultText(update: {
 export function clearMessageTracking(): void {
   presetMessageIds.clear();
 }
-
-const handler: AcpNotificationHandler = {
-  handleSessionNotification,
-};
-
-export default handler;

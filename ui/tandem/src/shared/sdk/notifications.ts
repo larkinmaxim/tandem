@@ -1,2 +1,9 @@
-// Placeholder: wired up in slice #37 (Session events).
-// Exports a typed event bus that delegates to the installed container's events port.
+import type { SessionEventKind, SessionEvent } from "@/core/domain/SessionEvent";
+import type { Subscription } from "@/core/domain/Subscription";
+import { sdk } from "./index";
+
+export const notifications = {
+  on(kind: SessionEventKind, handler: (event: SessionEvent) => void): Subscription {
+    return sdk.events.on(kind, handler);
+  },
+};

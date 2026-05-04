@@ -5,6 +5,7 @@ import type { AgentSetupPort } from "@/core/ports/AgentSetupPort";
 import type { ModelSetupPort } from "@/core/ports/ModelSetupPort";
 import type { ChatPort } from "@/core/ports/ChatPort";
 import type { ConnectionPort } from "@/core/ports/ConnectionPort";
+import type { SessionEventsPort } from "@/core/ports/SessionEventsPort";
 
 export { installBackend, useBackend, resetBackend } from "./install";
 
@@ -19,6 +20,7 @@ export interface Sdk {
   readonly providers: ProvidersFacade;
   readonly chat: ChatPort;
   readonly connection: ConnectionPort;
+  readonly events: SessionEventsPort;
 }
 
 export const sdk: Sdk = {
@@ -44,5 +46,8 @@ export const sdk: Sdk = {
   },
   get connection(): ConnectionPort {
     return useBackend().connection;
+  },
+  get events(): SessionEventsPort {
+    return useBackend().events;
   },
 };

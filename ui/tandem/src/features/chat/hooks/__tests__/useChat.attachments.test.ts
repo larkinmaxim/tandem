@@ -21,6 +21,9 @@ vi.mock("@/shared/api/acp", () => ({
 
 vi.mock("@/shared/api/acpSessionTracker", () => ({
   getGooseSessionId: vi.fn().mockReturnValue(null),
+  subscribeToSessionRegistration: vi.fn(),
+  getLocalSessionId: vi.fn(),
+  registerSession: vi.fn(),
 }));
 
 import { useChat } from "../useChat";
