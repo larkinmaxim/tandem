@@ -5,7 +5,7 @@
   "identifier": "com.tandem.app",
   "build": {
     "beforeDevCommand": {
-      "script": "exec ./node_modules/.bin/vite",
+      "script": "exec pnpm dev",
       "cwd": "..",
       "wait": false
     },
