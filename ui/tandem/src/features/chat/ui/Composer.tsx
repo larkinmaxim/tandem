@@ -4,7 +4,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from "react";
-import { FileText, Paperclip, X } from "lucide-react";
+import { Brain, ChevronDown, FileText, Paperclip, Plug, X } from "lucide-react";
 
 export interface ComposerAttachment {
   name: string;
@@ -15,6 +15,11 @@ export interface ComposerAttachment {
 export interface ComposerProps {
   placeholder?: string;
   onSend?: (text: string, attachments: ComposerAttachment[]) => void;
+  disabled?: boolean;
+  contextFolder?: string;
+  mcpCount?: number;
+  tokenUsed?: number;
+  tokenLimit?: number;
 }
 
 function readAsBase64(file: File): Promise<string> {
@@ -34,9 +39,27 @@ function readAsBase64(file: File): Promise<string> {
   });
 }
 
+function formatTokens(used: number, limit: number): string {
+  const fmt = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n));
+  return `${fmt(used)} / ${fmt(limit)}`;
+}
+
+function tokenColor(used: number, limit: number): string {
+  if (limit <= 0) return "var(--color-success, #4ade80)";
+  const ratio = used / limit;
+  if (ratio >= 0.8) return "var(--color-danger, #ef4444)";
+  if (ratio >= 0.6) return "var(--color-warning, #f59e0b)";
+  return "var(--color-success, #4ade80)";
+}
+
 export const Composer = ({
   placeholder = "Ask anything, or paste a file…",
   onSend,
+  disabled = false,
+  contextFolder = "Default",
+  mcpCount = 0,
+  tokenUsed = 0,
+  tokenLimit = 0,
 }: ComposerProps) => {
   const [value, setValue] = useState("");
   const [attachments, setAttachments] = useState<ComposerAttachment[]>([]);
@@ -142,6 +165,7 @@ export const Composer = ({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={handleKeyDown}
+        disabled={disabled}
         style={{
           width: "100%",
           minHeight: 44,
@@ -153,6 +177,7 @@ export const Composer = ({
           fontFamily: "var(--font-ui)",
           fontSize: 14,
           lineHeight: 1.5,
+          ...(disabled ? { opacity: 0.5, cursor: "not-allowed" } : {}),
         }}
       />
       <div
@@ -171,6 +196,7 @@ export const Composer = ({
           data-testid="chat-composer-attach"
           aria-label="Attach file"
           title="Attach file"
+          disabled={disabled}
           onClick={() => fileInputRef.current?.click()}
           style={{
             display: "inline-flex",
@@ -181,8 +207,10 @@ export const Composer = ({
             background: "transparent",
             border: "none",
             color: "var(--color-text-muted)",
-            cursor: "pointer",
             padding: 0,
+            ...(disabled
+              ? { opacity: 0.5, cursor: "not-allowed" }
+              : { cursor: "pointer" }),
           }}
         >
           <Paperclip size={13} />
@@ -196,6 +224,78 @@ export const Composer = ({
           onChange={handleFileChange}
           style={{ display: "none" }}
         />
+        <div style={{ flex: 1 }} />
+        <div
+          data-testid="chat-composer-context-folder"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            color: "var(--color-text-muted)",
+          }}
+        >
+          <Brain size={12} />
+          <span>{contextFolder}</span>
+          <ChevronDown size={10} />
+        </div>
+        <div
+          data-testid="chat-composer-token-counter"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <div
+            style={{
+              width: 40,
+              height: 4,
+              borderRadius: 2,
+              background: "var(--color-border-subtle)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                width: `${tokenLimit > 0 ? Math.min(100, (tokenUsed / tokenLimit) * 100) : 0}%`,
+                height: "100%",
+                borderRadius: 2,
+                background: tokenColor(tokenUsed, tokenLimit),
+              }}
+            />
+          </div>
+          <span style={{ color: tokenColor(tokenUsed, tokenLimit) }}>
+            {formatTokens(tokenUsed, tokenLimit)}
+          </span>
+        </div>
+        <div
+          data-testid="chat-composer-mcp-count"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            color: "var(--color-text-muted)",
+          }}
+        >
+          <Plug size={12} />
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              minWidth: 16,
+              height: 16,
+              borderRadius: 999,
+              background: "var(--color-accent)",
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 600,
+              padding: "0 4px",
+            }}
+          >
+            {mcpCount}
+          </span>
+        </div>
       </div>
     </div>
   );

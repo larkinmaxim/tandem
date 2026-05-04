@@ -31,6 +31,8 @@ import { AppShell } from "@/app/AppShell";
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useToastStore } from "@/features/toasts/toastStore";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useProviderInventoryStore } from "@/features/providers/stores/providerInventoryStore";
 import {
   DRAFT_TAB_PREFIX,
   useTabsStore,
@@ -53,6 +55,10 @@ describe("AppShell", () => {
     useChatStore.setState({ messagesBySession: {}, sessionStateById: {} });
     useToastStore.setState({ toasts: [] });
     useTabsStore.setState({ openIds: [], activeId: null });
+    useAgentStore.setState({ personas: [] });
+    useProviderInventoryStore.getState().setEntries([
+      { providerId: "openai", configured: true, models: [] } as never,
+    ]);
     localStorage.clear();
     mockAcpCreateSession.mockReset();
     mockAcpSendMessage.mockReset();
@@ -655,7 +661,204 @@ describe("AppShell", () => {
     expect(screen.getByTestId("tab-abc")).toBeInTheDocument();
     await user.click(screen.getByTestId("tab-close-abc"));
     expect(screen.queryByTestId("tab-abc")).not.toBeInTheDocument();
-    // Session still in history
     expect(screen.getByTestId("session-row-abc")).toBeInTheDocument();
+  });
+
+  describe("persona name on assistant messages (slice 9)", () => {
+    it("renders 'Tandem' as fallback persona name on assistant messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      const personaHeader = screen.getByTestId("chat-message-persona-a1");
+      expect(personaHeader).toHaveTextContent("Tandem");
+    });
+
+    it("renders the persona display name when session has a personaId and agentStore has a matching persona", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+            personaId: "persona-abc",
+          },
+        ],
+      });
+      useAgentStore.setState({
+        personas: [
+          {
+            id: "persona-abc",
+            displayName: "Code Wizard",
+            systemPrompt: "",
+            isBuiltin: true,
+            createdAt: "",
+            updatedAt: "",
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      const personaHeader = screen.getByTestId("chat-message-persona-a1");
+      expect(personaHeader).toHaveTextContent("Code Wizard");
+    });
+
+    it("does not render a persona header on user messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(
+        screen.queryByTestId("chat-message-persona-u1"),
+      ).not.toBeInTheDocument();
+    });
+  });
+
+  describe("composer footer chips (slice 10)", () => {
+    it("renders context folder, token counter, and MCP count chips in the composer footer", () => {
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(
+        screen.getByTestId("chat-composer-context-folder"),
+      ).toHaveTextContent("Default");
+      expect(
+        screen.getByTestId("chat-composer-token-counter"),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByTestId("chat-composer-mcp-count"),
+      ).toBeInTheDocument();
+    });
+  });
+
+  describe("providers banner (slice 11)", () => {
+    it("renders the ProvidersBanner when no providers have configured: true", () => {
+      useProviderInventoryStore.getState().setEntries([]);
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const banner = screen.getByTestId("providers-banner");
+      expect(banner).toBeInTheDocument();
+      expect(banner).toHaveTextContent(
+        "No providers configured. Open goose2 to set up an API key, then restart Tandem.",
+      );
+    });
+
+    it("does not render the banner when a configured provider exists", () => {
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(screen.queryByTestId("providers-banner")).not.toBeInTheDocument();
+    });
+
+    it("disables the composer when no providers are configured", () => {
+      useProviderInventoryStore.getState().setEntries([]);
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const textarea = screen.getByTestId(
+        "chat-composer-input",
+      ) as HTMLTextAreaElement;
+      expect(textarea.disabled).toBe(true);
+    });
+
+    it("enables the composer when providers are configured", () => {
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const textarea = screen.getByTestId(
+        "chat-composer-input",
+      ) as HTMLTextAreaElement;
+      expect(textarea.disabled).toBe(false);
+    });
   });
 });

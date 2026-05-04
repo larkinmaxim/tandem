@@ -1,6 +1,8 @@
 import { Sparkles } from "lucide-react";
 
 import { useChatStore } from "@/features/chat/stores/chatStore";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
 import { getUserInitials } from "@/features/chat/lib/userIdentity";
 import { getTextContent, type Message } from "@/shared/types/messages";
 import type { ChatState } from "@/shared/types/chat";
@@ -16,6 +18,16 @@ const ASSISTANT_BUSY_STATES: ReadonlySet<ChatState> = new Set([
   "streaming",
 ]);
 
+function usePersonaNameForSession(sessionId: string): string {
+  const personaId = useChatSessionStore(
+    (s) => s.sessions.find((sess) => sess.id === sessionId)?.personaId,
+  );
+  const personaName = useAgentStore((s) =>
+    personaId ? s.personas.find((p) => p.id === personaId)?.displayName : undefined,
+  );
+  return personaName ?? "Tandem";
+}
+
 export const Timeline = ({ sessionId }: TimelineProps) => {
   const messages = useChatStore(
     (s) => s.messagesBySession[sessionId] ?? EMPTY_MESSAGES,
@@ -24,6 +36,7 @@ export const Timeline = ({ sessionId }: TimelineProps) => {
     (s) => s.sessionStateById[sessionId]?.chatState ?? "idle",
   );
   const showTypingIndicator = ASSISTANT_BUSY_STATES.has(chatState);
+  const personaName = usePersonaNameForSession(sessionId);
 
   return (
     <div
@@ -38,7 +51,7 @@ export const Timeline = ({ sessionId }: TimelineProps) => {
       }}
     >
       {messages.map((m) => (
-        <MessageRow key={m.id} message={m} />
+        <MessageRow key={m.id} message={m} personaName={personaName} />
       ))}
       {showTypingIndicator && <TypingIndicator />}
     </div>
@@ -124,7 +137,13 @@ const Avatar = ({ message }: { message: Message }) => {
   );
 };
 
-const MessageRow = ({ message }: { message: Message }) => {
+const MessageRow = ({
+  message,
+  personaName,
+}: {
+  message: Message;
+  personaName: string;
+}) => {
   return (
     <div
       data-testid={`chat-message-${message.role}`}
@@ -136,16 +155,32 @@ const MessageRow = ({ message }: { message: Message }) => {
       }}
     >
       <Avatar message={message} />
-      <div
-        style={{
-          fontFamily: "var(--font-reading)",
-          color: "var(--color-text)",
-          whiteSpace: "pre-wrap",
-          lineHeight: 1.55,
-          paddingTop: 4,
-        }}
-      >
-        {getTextContent(message)}
+      <div style={{ display: "flex", flexDirection: "column" }}>
+        {message.role === "assistant" && (
+          <div
+            data-testid={`chat-message-persona-${message.id}`}
+            style={{
+              fontFamily: "var(--font-ui)",
+              fontSize: 12,
+              fontWeight: 500,
+              color: "var(--color-text)",
+              marginBottom: 2,
+            }}
+          >
+            {personaName}
+          </div>
+        )}
+        <div
+          style={{
+            fontFamily: "var(--font-reading)",
+            color: "var(--color-text)",
+            whiteSpace: "pre-wrap",
+            lineHeight: 1.55,
+            paddingTop: message.role === "assistant" ? 0 : 4,
+          }}
+        >
+          {getTextContent(message)}
+        </div>
       </div>
     </div>
   );

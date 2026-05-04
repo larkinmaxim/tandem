@@ -1,17 +1,14 @@
 import { useEffect } from "react";
 
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
+import { useProviderInventoryStore } from "@/features/providers/stores/providerInventoryStore";
 import {
   getClient,
   setNotificationHandler,
 } from "@/shared/api/acpConnection";
 import notificationHandler from "@/shared/api/acpNotificationHandler";
+import { getProviderInventory } from "@/features/providers/api/inventory";
 
-// Phase 3a startup: register the chat notification handler so ACP
-// session_update events flow into chatStore, then prime the ACP client and
-// hydrate the session list. Phase 3b+ will expand this with provider
-// inventory, personas, etc. — see ui/goose2/src/app/hooks/useAppStartup.ts
-// for the fully-loaded shape.
 export function useAppStartup(): void {
   useEffect(() => {
     void (async () => {
@@ -22,6 +19,19 @@ export function useAppStartup(): void {
         console.error("Failed to initialize ACP connection:", err);
       }
       void useChatSessionStore.getState().loadSessions();
+      void loadProviderInventory();
     })();
   }, []);
+}
+
+async function loadProviderInventory(): Promise<void> {
+  try {
+    useProviderInventoryStore.getState().setLoading(true);
+    const entries = await getProviderInventory();
+    useProviderInventoryStore.getState().setEntries(entries);
+  } catch (err) {
+    console.error("Failed to load provider inventory:", err);
+  } finally {
+    useProviderInventoryStore.getState().setLoading(false);
+  }
 }
