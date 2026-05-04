@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 vi.mock("@/shared/api/acpConnection", () => ({
   getClient: vi.fn(() => new Promise(() => {})),
+  setNotificationHandler: vi.fn(),
 }));
 
 const { mockAcpCreateSession, mockAcpSendMessage, mockResolvePath } =
@@ -27,14 +28,37 @@ vi.mock("@/shared/api/pathResolver", () => ({
 }));
 
 import { AppShell } from "@/app/AppShell";
+import type { ProviderInventoryEntryDto } from "@aaif/goose-sdk";
+
 import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { useChatStore } from "@/features/chat/stores/chatStore";
 import { useToastStore } from "@/features/toasts/toastStore";
+import { useAgentStore } from "@/features/agents/stores/agentStore";
+import { useProviderInventoryStore } from "@/features/providers/stores/providerInventoryStore";
 import {
   DRAFT_TAB_PREFIX,
   useTabsStore,
 } from "@/features/tabs/stores/tabsStore";
 import { TABS_STORAGE_KEY } from "@/features/tabs/lib/tabPersistence";
+
+function makeConfiguredEntry(
+  providerId = "openai",
+): ProviderInventoryEntryDto {
+  return {
+    providerId,
+    providerName: providerId,
+    description: "",
+    defaultModel: "gpt-4",
+    configured: true,
+    providerType: "Builtin",
+    configKeys: [],
+    setupSteps: [],
+    supportsRefresh: false,
+    refreshing: false,
+    models: [],
+    stale: false,
+  };
+}
 
 function seedTabs(openIds: string[], activeId: string | null) {
   // Persist + setState so the AppShell hydrate effect restores the same shape
@@ -51,6 +75,13 @@ describe("AppShell", () => {
     useChatSessionStore.setState({ sessions: [], activeSessionId: null });
     useChatStore.setState({ messagesBySession: {}, sessionStateById: {} });
     useToastStore.setState({ toasts: [] });
+    useAgentStore.setState({ personas: [] });
+    useProviderInventoryStore.setState({
+      entries: new Map<string, ProviderInventoryEntryDto>([
+        ["openai", makeConfiguredEntry("openai")],
+      ]),
+      loading: false,
+    });
     useTabsStore.setState({ openIds: [], activeId: null });
     localStorage.clear();
     mockAcpCreateSession.mockReset();
@@ -455,6 +486,129 @@ describe("AppShell", () => {
       expect(assistantAvatar.querySelector("svg")).toBeInTheDocument();
     });
 
+    it("shows the persona's displayName on assistant messages when the session has a matching personaId", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            personaId: "p1",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useAgentStore.setState({
+        personas: [
+          {
+            id: "p1",
+            displayName: "Senior Engineer",
+            systemPrompt: "",
+            isBuiltin: true,
+            createdAt: "",
+            updatedAt: "",
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "a1",
+              role: "assistant",
+              created: 1,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-message-persona-a1")).toHaveTextContent(
+        "Senior Engineer",
+      );
+    });
+
+    it("does not render the persona header above user messages", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 2,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+            {
+              id: "a1",
+              role: "assistant",
+              created: 2,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(
+        screen.queryByTestId("chat-message-persona-u1"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("chat-message-persona-a1")).toBeInTheDocument();
+    });
+
+    it("shows the fallback persona name 'Tandem' on assistant messages when the session has no personaId", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "a1",
+              role: "assistant",
+              created: 1,
+              content: [{ type: "text", text: "hello back" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-message-persona-a1")).toHaveTextContent(
+        "Tandem",
+      );
+    });
+
     it("shows a typing indicator while the assistant is generating", () => {
       seedTabs(["sess-1"], "sess-1");
       useChatSessionStore.setState({
@@ -504,6 +658,59 @@ describe("AppShell", () => {
       render(<AppShell />);
 
       expect(screen.getByTestId("chat-typing-indicator")).toBeInTheDocument();
+    });
+
+    it("composer footer reflects the active session's tokenState from chatStore", () => {
+      seedTabs(["sess-1"], "sess-1");
+      useChatSessionStore.setState({
+        sessions: [
+          {
+            id: "sess-1",
+            title: "Existing chat",
+            createdAt: "",
+            updatedAt: "",
+            messageCount: 1,
+          },
+        ],
+      });
+      useChatStore.setState({
+        messagesBySession: {
+          "sess-1": [
+            {
+              id: "u1",
+              role: "user",
+              created: 1,
+              content: [{ type: "text", text: "hi" }],
+              metadata: { userVisible: true, agentVisible: true },
+            },
+          ],
+        },
+        sessionStateById: {
+          "sess-1": {
+            chatState: "idle",
+            tokenState: {
+              inputTokens: 0,
+              outputTokens: 0,
+              totalTokens: 0,
+              accumulatedInput: 0,
+              accumulatedOutput: 0,
+              accumulatedTotal: 8420,
+              contextLimit: 200000,
+            },
+            hasUsageSnapshot: true,
+            streamingMessageId: null,
+            pendingAssistantProviderId: null,
+            error: null,
+            hasUnread: false,
+          },
+        },
+      });
+
+      render(<AppShell />);
+
+      expect(screen.getByTestId("chat-composer-token-counter")).toHaveTextContent(
+        "8.4k / 200k",
+      );
     });
 
     it("hides the typing indicator when chatState is idle", () => {
@@ -589,6 +796,100 @@ describe("AppShell", () => {
         "real-session-id",
         "hello world",
       );
+    });
+
+    it("includes attached image in the ACP prompt payload as options.images", async () => {
+      const user = userEvent.setup();
+      const draftId = `${DRAFT_TAB_PREFIX}img`;
+      seedTabs([draftId], draftId);
+
+      mockAcpCreateSession.mockResolvedValue({
+        sessionId: "real-session-img",
+      });
+
+      render(<AppShell />);
+
+      const fileInput = screen.getByTestId(
+        "chat-composer-attach-input",
+      ) as HTMLInputElement;
+      const file = new File(["fake-png-bytes"], "diagram.png", {
+        type: "image/png",
+      });
+      await user.upload(fileInput, file);
+      await screen.findByTestId("chat-composer-attachment-chip");
+
+      const input = screen.getByTestId("chat-composer-input");
+      await user.type(input, "look at this");
+      await user.keyboard("{Enter}");
+
+      await waitFor(
+        () => {
+          expect(mockAcpSendMessage).toHaveBeenCalled();
+        },
+        { timeout: 3000 },
+      );
+
+      const [sessionId, text, options] = mockAcpSendMessage.mock.calls[0];
+      expect(sessionId).toBe("real-session-img");
+      expect(text).toBe("look at this");
+      expect(options).toBeDefined();
+      expect(options.images).toHaveLength(1);
+      const [data, mimeType] = options.images[0];
+      expect(typeof data).toBe("string");
+      expect(data.length).toBeGreaterThan(0);
+      expect(mimeType).toBe("image/png");
+    });
+  });
+
+  describe("providers banner (slice 11)", () => {
+    it("renders a banner with the warning copy when no providers are configured", () => {
+      useProviderInventoryStore.setState({
+        entries: new Map<string, ProviderInventoryEntryDto>(),
+      });
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const banner = screen.getByTestId("chat-providers-banner");
+      expect(banner).toBeInTheDocument();
+      expect(banner).toHaveTextContent(/no providers configured/i);
+      expect(banner).toHaveTextContent(/open goose2/i);
+    });
+
+    it("disables the composer textarea and attach button when no providers are configured", () => {
+      useProviderInventoryStore.setState({
+        entries: new Map<string, ProviderInventoryEntryDto>(),
+      });
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      const input = screen.getByTestId("chat-composer-input");
+      expect(input).toBeDisabled();
+      const attach = screen.getByTestId("chat-composer-attach");
+      expect(attach).toBeDisabled();
+    });
+
+    it("does not render the banner when at least one entry has configured: true", () => {
+      useProviderInventoryStore.setState({
+        entries: new Map<string, ProviderInventoryEntryDto>([
+          [
+            "openai",
+            { ...makeConfiguredEntry("openai"), configured: false },
+          ],
+          ["anthropic", makeConfiguredEntry("anthropic")],
+        ]),
+      });
+      const draftId = `${DRAFT_TAB_PREFIX}abc`;
+      seedTabs([draftId], draftId);
+
+      render(<AppShell />);
+
+      expect(
+        screen.queryByTestId("chat-providers-banner"),
+      ).not.toBeInTheDocument();
     });
   });
 
