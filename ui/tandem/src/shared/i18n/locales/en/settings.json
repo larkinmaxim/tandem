@@ -10,10 +10,10 @@
         "cyan": "Cyan",
         "green": "Green",
         "indigo": "Indigo",
-        "orange": "Orange",
         "pink": "Pink",
-        "purple": "Purple",
-        "red": "Red"
+        "red": "Red",
+        "teal": "Teal",
+        "violet": "Violet"
       },
       "description": "Choose your accent color",
       "label": "Accent Color"

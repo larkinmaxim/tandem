@@ -10,10 +10,10 @@
         "cyan": "Cian",
         "green": "Verde",
         "indigo": "Índigo",
-        "orange": "Naranja",
         "pink": "Rosa",
-        "purple": "Morado",
-        "red": "Rojo"
+        "red": "Rojo",
+        "teal": "Verde azulado",
+        "violet": "Violeta"
       },
       "description": "Elige tu color de acento",
       "label": "Color de acento"

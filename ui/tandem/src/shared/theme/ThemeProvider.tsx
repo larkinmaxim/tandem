@@ -57,7 +57,7 @@ export function ThemeProvider({
   );
 
   const [accentColor, setAccentColorState] = React.useState<string>(() => {
-    return localStorage.getItem("goose-accent-color") ?? "#3b82f6";
+    return localStorage.getItem("goose-accent-color") ?? "#8b7cff";
   });
 
   const [density, setDensityState] = React.useState<Density>(() => {

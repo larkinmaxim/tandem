@@ -124,7 +124,7 @@
   --text-info: var(--color-blue-200);
   --text-placeholder: var(--color-gray-400);
 
-  --ring: color-mix(in srgb, var(--border-strong) 20%, transparent);
+  --ring: color-mix(in srgb, var(--color-brand) 30%, transparent);
 
   /* Alpha variants */
   --dark-10: rgba(26, 26, 26, 0.1);
@@ -307,7 +307,7 @@
   --text-info: #7aa2f7;
   --text-placeholder: #4a4b52;
 
-  --ring: color-mix(in srgb, var(--border-strong) 20%, transparent);
+  --ring: color-mix(in srgb, var(--color-brand) 30%, transparent);
 
   /* Alpha variants (dark mode) */
   --dark-10: rgba(255, 255, 255, 0.1);
@@ -691,7 +691,7 @@ body,
 
   ::selection {
     background: color-mix(in srgb, var(--color-brand) 60%, transparent);
-    color: #ffffff;
+    color: var(--foreground);
   }
 
   ::-webkit-scrollbar {

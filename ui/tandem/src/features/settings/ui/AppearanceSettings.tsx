@@ -12,13 +12,13 @@ const THEME_OPTIONS = [
 ] as const;
 
 const ACCENT_COLORS = [
+  { name: "violet", value: "#8b7cff" },
   { name: "blue", value: "#3b82f6" },
   { name: "cyan", value: "#06b6d4" },
   { name: "green", value: "#22c55e" },
-  { name: "orange", value: "#f97316" },
+  { name: "teal", value: "#14b8a6" },
   { name: "red", value: "#ef4444" },
   { name: "pink", value: "#ec4899" },
-  { name: "purple", value: "#a855f7" },
   { name: "indigo", value: "#6366f1" },
 ];
 
