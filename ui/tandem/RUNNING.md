@@ -1,8 +1,8 @@
 # Running Tandem (dev)
 
-Quick reference for starting `ui/tandem` in dev mode on WSL Ubuntu.
+Quick reference for starting `ui/tandem` in dev mode on Linux/WSL or Windows.
 
-## TL;DR
+## TL;DR (Linux / WSL)
 
 ```bash
 cd ~/work/tandem/ui                         # pnpm workspace root
@@ -13,6 +13,42 @@ pnpm tauri dev --config src-tauri/tauri.dev.conf.json
 ```
 
 Vite serves on `http://localhost:1520/`. Tauri window opens via WSLg.
+
+## TL;DR (Windows)
+
+The same command works on Windows once the MSVC linker is on PATH. Easiest
+way is to enter the Visual Studio Developer environment in your PowerShell
+session before running `pnpm tauri dev`:
+
+```powershell
+$vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" `
+        -latest -products * `
+        -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+        -property installationPath
+Import-Module "$vs\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+Enter-VsDevShell -VsInstallPath $vs -DevCmdArguments '-arch=x64 -host_arch=x64' -SkipAutomaticLocation
+
+cd C:\Tandem_dev\ui\tandem
+pnpm tauri dev --config src-tauri\tauri.dev.conf.json
+```
+
+Equivalent: open "x64 Native Tools Command Prompt for VS" from the Start menu
+(installed alongside Build Tools) and run `pnpm tauri dev` from there.
+
+Tauri uses WebView2 for the window (preinstalled on Windows 11).
+
+### Windows prerequisites
+
+- **Node 22+ and pnpm 10** — match the `packageManager` field in
+  `ui/tandem/package.json`.
+- **Rust MSVC toolchain** — `rustup default stable-x86_64-pc-windows-msvc`.
+  The repo's `rust-toolchain.toml` pins the version.
+- **Visual Studio Build Tools 2022 or 2026** with the
+  `Microsoft.VisualStudio.Component.VC.Tools.x86.x64` workload (the C++ build
+  tools). This installs `link.exe`, `cl.exe`, the Windows SDK, and UCRT
+  headers/libs. The `Enter-VsDevShell` snippet above is what loads them.
+- **WebView2 Runtime** — preinstalled on Windows 11, otherwise install the
+  Evergreen Bootstrapper from Microsoft.
 
 ## Why `--config src-tauri/tauri.dev.conf.json` is required
 

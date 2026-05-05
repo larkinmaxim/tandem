@@ -5,7 +5,7 @@
   "identifier": "com.tandem.app",
   "build": {
     "beforeDevCommand": {
-      "script": "exec pnpm dev",
+      "script": "pnpm dev",
       "cwd": "..",
       "wait": false
     },
