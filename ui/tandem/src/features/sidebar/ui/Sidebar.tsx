@@ -317,7 +317,14 @@ export function Sidebar({
               collapsed ? "justify-center" : "justify-between",
             )}
           >
-            <TandemIcon className="text-foreground" />
+            <div className="flex items-center gap-1">
+              <TandemIcon className="text-foreground" />
+              {!collapsed && (
+                <span className="text-base font-semibold leading-none tracking-tight whitespace-nowrap text-[#5a5b62] dark:text-[#CECECE]">
+                  Tandem
+                </span>
+              )}
+            </div>
             {!collapsed && (
               <Button
                 type="button"
