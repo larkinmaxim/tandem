@@ -94,13 +94,12 @@ Not every feature needs every subdirectory. Use only what the feature requires:
 
 ## Theming System
 
-ThemeProvider manages three axes:
+ThemeProvider manages two axes:
 
 | Axis         | Values                          | Persistence     | Mechanism                                    |
 |--------------|---------------------------------|-----------------|----------------------------------------------|
 | Theme mode   | `light`, `dark`, `system`       | localStorage    | `.dark` class on `<html>`                    |
 | Accent color | Any hex value                   | localStorage    | `--color-accent` CSS variable                |
-| Density      | `compact`, `comfortable`, `spacious` | localStorage | `--density-spacing` CSS variable (0.75/1/1.25) |
 
 - CSS variables are defined in `globals.css` with light/dark variants.
 - Tailwind config maps CSS variables to semantic color names.

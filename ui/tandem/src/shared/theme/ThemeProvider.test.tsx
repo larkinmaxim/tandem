@@ -4,12 +4,11 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ThemeProvider, useTheme } from "./ThemeProvider";
 
 function ThemeConsumer() {
-  const { theme, setTheme, accentColor, density } = useTheme();
+  const { theme, setTheme, accentColor } = useTheme();
   return (
     <div>
       <span data-testid="theme">{theme}</span>
       <span data-testid="accent">{accentColor}</span>
-      <span data-testid="density">{density}</span>
       <button type="button" onClick={() => setTheme("dark")}>
         Set Dark
       </button>
@@ -68,31 +67,20 @@ describe("ThemeProvider", () => {
     expect(screen.getByTestId("accent")).toHaveTextContent("#8b7cff");
   });
 
-  it("provides default density", () => {
-    render(
-      <ThemeProvider>
-        <ThemeConsumer />
-      </ThemeProvider>,
-    );
-    expect(screen.getByTestId("density")).toHaveTextContent("comfortable");
-  });
-
   describe("localStorage migration", () => {
     it("migrates goose-* keys to tandem-* on import", async () => {
       localStorage.setItem("goose-theme", "dark");
       localStorage.setItem("goose-accent-color", "#ef4444");
-      localStorage.setItem("goose-density", "compact");
 
       vi.resetModules();
       const mod = await import("./ThemeProvider");
 
       function Consumer() {
-        const { theme, accentColor, density } = mod.useTheme();
+        const { theme, accentColor } = mod.useTheme();
         return (
           <div>
             <span data-testid="m-theme">{theme}</span>
             <span data-testid="m-accent">{accentColor}</span>
-            <span data-testid="m-density">{density}</span>
           </div>
         );
       }
@@ -105,14 +93,11 @@ describe("ThemeProvider", () => {
 
       expect(screen.getByTestId("m-theme")).toHaveTextContent("dark");
       expect(screen.getByTestId("m-accent")).toHaveTextContent("#ef4444");
-      expect(screen.getByTestId("m-density")).toHaveTextContent("compact");
 
       expect(localStorage.getItem("tandem-theme")).toBe("dark");
       expect(localStorage.getItem("tandem-accent-color")).toBe("#ef4444");
-      expect(localStorage.getItem("tandem-density")).toBe("compact");
       expect(localStorage.getItem("goose-theme")).toBeNull();
       expect(localStorage.getItem("goose-accent-color")).toBeNull();
-      expect(localStorage.getItem("goose-density")).toBeNull();
     });
 
     it("does not overwrite existing tandem-* keys during migration", async () => {
