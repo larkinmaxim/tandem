@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { ThemeProvider, useTheme } from "./ThemeProvider";
 
 function ThemeConsumer() {
@@ -83,12 +83,11 @@ describe("ThemeProvider", () => {
       localStorage.setItem("goose-accent-color", "#ef4444");
       localStorage.setItem("goose-density", "compact");
 
-      // Re-import to trigger migration
-      const mod = await import("./ThemeProvider?migrate-test-1");
-      const { ThemeProvider: TP, useTheme: ut } = mod;
+      vi.resetModules();
+      const mod = await import("./ThemeProvider");
 
       function Consumer() {
-        const { theme, accentColor, density } = ut();
+        const { theme, accentColor, density } = mod.useTheme();
         return (
           <div>
             <span data-testid="m-theme">{theme}</span>
@@ -99,9 +98,9 @@ describe("ThemeProvider", () => {
       }
 
       render(
-        <TP>
+        <mod.ThemeProvider>
           <Consumer />
-        </TP>,
+        </mod.ThemeProvider>,
       );
 
       expect(screen.getByTestId("m-theme")).toHaveTextContent("dark");
@@ -120,18 +119,18 @@ describe("ThemeProvider", () => {
       localStorage.setItem("goose-theme", "light");
       localStorage.setItem("tandem-theme", "dark");
 
-      const mod = await import("./ThemeProvider?migrate-test-2");
-      const { ThemeProvider: TP, useTheme: ut } = mod;
+      vi.resetModules();
+      const mod = await import("./ThemeProvider");
 
       function Consumer() {
-        const { theme } = ut();
+        const { theme } = mod.useTheme();
         return <span data-testid="m2-theme">{theme}</span>;
       }
 
       render(
-        <TP>
+        <mod.ThemeProvider>
           <Consumer />
-        </TP>,
+        </mod.ThemeProvider>,
       );
 
       expect(screen.getByTestId("m2-theme")).toHaveTextContent("dark");
@@ -143,11 +142,11 @@ describe("ThemeProvider", () => {
       localStorage.setItem("tandem-theme", "light");
       localStorage.setItem("tandem-accent-color", "#22c55e");
 
-      const mod = await import("./ThemeProvider?migrate-test-3");
-      const { ThemeProvider: TP, useTheme: ut } = mod;
+      vi.resetModules();
+      const mod = await import("./ThemeProvider");
 
       function Consumer() {
-        const { theme, accentColor } = ut();
+        const { theme, accentColor } = mod.useTheme();
         return (
           <div>
             <span data-testid="m3-theme">{theme}</span>
@@ -157,9 +156,9 @@ describe("ThemeProvider", () => {
       }
 
       render(
-        <TP>
+        <mod.ThemeProvider>
           <Consumer />
-        </TP>,
+        </mod.ThemeProvider>,
       );
 
       expect(screen.getByTestId("m3-theme")).toHaveTextContent("light");

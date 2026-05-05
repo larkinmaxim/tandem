@@ -6,7 +6,7 @@ import {
 } from "@tabler/icons-react";
 import { BookOpen, Bot, History, Home, Search, Settings } from "lucide-react";
 import { getDisplaySessionTitle } from "@/features/chat/lib/sessionTitle";
-import { GooseIcon } from "@/shared/ui/icons/GooseIcon";
+import { TandemIcon } from "@/shared/ui/icons/TandemIcon";
 import { cn } from "@/shared/lib/cn";
 import type { AppView } from "@/app/AppShell";
 import type { ProjectInfo } from "@/features/projects/api/projects";
@@ -317,7 +317,7 @@ export function Sidebar({
               collapsed ? "justify-center" : "justify-between",
             )}
           >
-            <GooseIcon className="text-foreground" />
+            <TandemIcon className="text-foreground" />
             {!collapsed && (
               <Button
                 type="button"
