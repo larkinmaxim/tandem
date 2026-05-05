@@ -93,15 +93,46 @@ impl GooseServeProcess {
 
 pub fn get_goose_command(app_handle: &tauri::AppHandle) -> Result<Command, String> {
     if let Ok(override_path) = std::env::var("GOOSE_BIN") {
-        Ok(Command::new(override_path))
-    } else {
-        let tauri_command = app_handle
-            .shell()
-            .sidecar("goose")
-            .map_err(|e| format!("could not resolve goose binary: {e}"))?;
-        let std_command: std::process::Command = tauri_command.into();
-        Ok(std_command.into())
+        return Ok(Command::new(override_path));
     }
+
+    let tauri_command = app_handle
+        .shell()
+        .sidecar("goose")
+        .map_err(|e| format!("could not resolve goose binary: {e}"))?;
+    let std_command: std::process::Command = tauri_command.into();
+
+    // tauri.dev.conf.json sets `externalBin: []` so the sidecar isn't packaged
+    // in dev. Fall back to the workspace's debug build of goose-cli when the
+    // sidecar path doesn't exist, so devs don't need to set GOOSE_BIN by hand.
+    #[cfg(debug_assertions)]
+    {
+        let resolved = std::path::Path::new(std_command.get_program());
+        if !resolved.exists() {
+            if let Some(fallback) = workspace_goose_binary() {
+                if fallback.exists() {
+                    log::info!(
+                        "Sidecar goose binary not found at {}; using workspace fallback {}",
+                        resolved.display(),
+                        fallback.display()
+                    );
+                    return Ok(Command::new(fallback));
+                }
+            }
+        }
+    }
+
+    Ok(std_command.into())
+}
+
+#[cfg(debug_assertions)]
+fn workspace_goose_binary() -> Option<PathBuf> {
+    // CARGO_MANIFEST_DIR resolves at compile time to <workspace>/ui/tandem/src-tauri.
+    // The goose-cli debug binary lives at <workspace>/target/debug/goose[.exe].
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent()?.parent()?.parent()?;
+    let bin_name = if cfg!(windows) { "goose.exe" } else { "goose" };
+    Some(workspace_root.join("target").join("debug").join(bin_name))
 }
 
 async fn wait_for_server_ready(port: u16, child: &mut Child) -> Result<(), String> {
