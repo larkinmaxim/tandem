@@ -341,7 +341,10 @@ export function Sidebar({
         >
           {currentRect && !collapsed && (
             <div
-              className="absolute left-1.5 right-1.5 rounded-lg bg-accent/50 pointer-events-none z-0"
+              className={cn(
+                "absolute left-1.5 right-1.5 rounded-lg pointer-events-none z-0",
+                isHovering ? "bg-accent/50" : "bg-brand/16",
+              )}
               style={{
                 top: currentRect.top,
                 height: currentRect.height,
@@ -411,10 +414,10 @@ export function Sidebar({
               title={collapsed ? t("navigation.home") : undefined}
               aria-label={t("navigation.home")}
               className={cn(
-                "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
+                "relative flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
                 "gap-2.5 p-3",
                 activeView === "home"
-                  ? "font-medium text-foreground"
+                  ? "font-medium text-brand before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-brand"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
@@ -446,10 +449,10 @@ export function Sidebar({
                   onMouseEnter={onItemMouseEnter}
                   title={collapsed ? item.label : undefined}
                   className={cn(
-                    "flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
+                    "relative flex items-center w-full text-[13px] transition-colors duration-200 rounded-md",
                     "gap-2.5 p-3",
                     isActive
-                      ? "font-medium text-foreground"
+                      ? "font-medium text-brand before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-brand"
                       : "text-muted-foreground hover:text-foreground",
                   )}
                   aria-current={isActive ? "page" : undefined}

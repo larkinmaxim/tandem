@@ -370,7 +370,7 @@ export function ChatInput({
             <div
               ref={containerRef}
               className={cn(
-                "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors",
+                "relative rounded-2xl border border-border bg-background px-4 pb-3 pt-4 transition-colors focus-within:border-brand/40 focus-within:[box-shadow:0_0_0_4px_color-mix(in_srgb,var(--color-brand)_12%,transparent)]",
                 isAttachmentDragOver && "bg-muted/20",
               )}
               onDragEnter={handleDragEnter}

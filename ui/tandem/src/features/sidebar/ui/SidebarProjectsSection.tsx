@@ -150,7 +150,7 @@ function ProjectSection({
           className={cn(
             "flex-1 min-w-0 justify-start gap-2 rounded-md px-3 py-2 text-[13px] font-light",
             activeProjectId === project.id
-              ? "font-medium text-foreground hover:bg-transparent hover:text-foreground group-hover:text-foreground"
+              ? "font-medium text-brand hover:bg-transparent hover:text-brand group-hover:text-brand before:absolute before:left-0 before:top-2 before:bottom-2 before:w-0.5 before:rounded-full before:bg-brand"
               : PROJECT_ROW_TEXT_CLASS,
           )}
         >

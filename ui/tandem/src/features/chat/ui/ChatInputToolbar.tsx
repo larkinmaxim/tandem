@@ -445,8 +445,8 @@ export function ChatInputToolbar({
                 "rounded-full",
                 "shadow-none",
                 canSend
-                  ? "bg-foreground text-background hover:bg-foreground/90"
-                  : "cursor-default bg-foreground/10 text-muted-foreground disabled:opacity-100",
+                  ? "bg-brand text-brand-foreground hover:bg-brand/90"
+                  : "cursor-default bg-accent text-muted-foreground disabled:opacity-100",
               )}
               aria-label={t("toolbar.sendMessage")}
               title={canSend ? t("toolbar.sendMessage") : undefined}
