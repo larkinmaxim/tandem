@@ -10,10 +10,10 @@ export function TandemIcon({ className = "" }: { className?: string }) {
       aria-hidden="true"
     >
       <title>Tandem</title>
-      <circle cx="14.5" cy="10" r="8" className="fill-[#CECECE] dark:fill-[#6E6E6E]" />
-      <circle cx="16.5" cy="8" r="2" fill="#9E9E9E" />
-      <circle cx="9.5" cy="14" r="8" className="fill-[#CECECE] dark:fill-[#6E6E6E]" />
-      <circle cx="7.5" cy="12" r="2" fill="#F37021" />
+      <circle cx="15.26" cy="11.98" r="7.55" className="fill-[#5a5b62] dark:fill-[#CECECE]" />
+      <circle cx="15.26" cy="11.98" r="2.95" className="fill-[#2a2b31] dark:fill-[#9E9E9E]" />
+      <circle cx="8.77" cy="11.98" r="7.55" className="fill-[#3a3b40] dark:fill-[#6E6E6E]" />
+      <circle cx="8.77" cy="11.98" r="2.95" fill="#F37021" />
     </svg>
   );
 }
