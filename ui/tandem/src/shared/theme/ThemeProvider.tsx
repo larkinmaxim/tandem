@@ -23,6 +23,25 @@ const ThemeProviderContext = React.createContext<
   ThemeProviderState | undefined
 >(undefined);
 
+const LEGACY_KEYS = ["goose-theme", "goose-accent-color", "goose-density"];
+const NEW_KEYS = ["tandem-theme", "tandem-accent-color", "tandem-density"];
+
+function migrateLocalStorageKeys() {
+  for (let i = 0; i < LEGACY_KEYS.length; i++) {
+    const legacy = LEGACY_KEYS[i];
+    const next = NEW_KEYS[i];
+    if (localStorage.getItem(next) === null) {
+      const value = localStorage.getItem(legacy);
+      if (value !== null) {
+        localStorage.setItem(next, value);
+      }
+    }
+    localStorage.removeItem(legacy);
+  }
+}
+
+migrateLocalStorageKeys();
+
 function resolveTheme(preference: ThemePreference): ResolvedTheme {
   if (preference === "system") {
     return window.matchMedia("(prefers-color-scheme: dark)").matches
@@ -47,7 +66,7 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<ThemePreference>(() => {
     const stored = localStorage.getItem(
-      "goose-theme",
+      "tandem-theme",
     ) as ThemePreference | null;
     return stored ?? defaultTheme;
   });
@@ -57,26 +76,26 @@ export function ThemeProvider({
   );
 
   const [accentColor, setAccentColorState] = React.useState<string>(() => {
-    return localStorage.getItem("goose-accent-color") ?? "#8b7cff";
+    return localStorage.getItem("tandem-accent-color") ?? "#8b7cff";
   });
 
   const [density, setDensityState] = React.useState<Density>(() => {
-    const stored = localStorage.getItem("goose-density") as Density | null;
+    const stored = localStorage.getItem("tandem-density") as Density | null;
     return stored ?? "comfortable";
   });
 
   const setTheme = React.useCallback((newTheme: ThemePreference) => {
-    localStorage.setItem("goose-theme", newTheme);
+    localStorage.setItem("tandem-theme", newTheme);
     setThemeState(newTheme);
   }, []);
 
   const setAccentColor = React.useCallback((color: string) => {
-    localStorage.setItem("goose-accent-color", color);
+    localStorage.setItem("tandem-accent-color", color);
     setAccentColorState(color);
   }, []);
 
   const setDensity = React.useCallback((d: Density) => {
-    localStorage.setItem("goose-density", d);
+    localStorage.setItem("tandem-density", d);
     setDensityState(d);
   }, []);
 
