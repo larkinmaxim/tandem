@@ -1,12 +1,12 @@
 use base64::Engine;
 use chrono::Utc;
-use etcetera::{choose_app_strategy, AppStrategy, AppStrategyArgs};
+use etcetera::{AppStrategy, AppStrategyArgs, choose_app_strategy};
 use regex::Regex;
 use serde::Serialize;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use zip::write::FileOptions;
 use zip::ZipWriter;
+use zip::write::FileOptions;
 
 const MAX_FILE_BYTES: u64 = 1_048_576; // 1 MB
 const OMISSION_MARKER: &str = "\n... ({} bytes omitted) ...\n";
@@ -31,9 +31,8 @@ fn resolve_state_dir() -> Option<PathBuf> {
     if let Ok(root) = std::env::var("GOOSE_PATH_ROOT") {
         return Some(PathBuf::from(root).join("state"));
     }
-    choose_app_strategy(app_strategy()?)
-        .ok()
-        .and_then(|s| s.state_dir())
+    let strategy = choose_app_strategy(app_strategy()?).ok()?;
+    Some(strategy.state_dir().unwrap_or_else(|| strategy.data_dir()))
 }
 
 fn resolve_config_dir() -> Option<PathBuf> {
@@ -238,7 +237,9 @@ fn build_manifest(recent_errors: &str, session_id: Option<&str>) -> String {
     let errors_section = if recent_errors == "_No recent errors._" {
         "_No recent errors._".to_string()
     } else {
-        format!("<details>\n<summary>Last errors/warnings</summary>\n\n```\n{recent_errors}\n```\n</details>")
+        format!(
+            "<details>\n<summary>Last errors/warnings</summary>\n\n```\n{recent_errors}\n```\n</details>"
+        )
     };
 
     format!(
@@ -629,9 +630,11 @@ normal_setting: keep-this
         let result = extract_recent_errors(&log_path, 5);
         let lines: Vec<&str> = result.lines().collect();
         assert!(lines.len() <= 5);
-        assert!(lines
-            .iter()
-            .all(|l| l.contains("ERROR") || l.contains("WARN")));
+        assert!(
+            lines
+                .iter()
+                .all(|l| l.contains("ERROR") || l.contains("WARN"))
+        );
     }
 
     #[test]
@@ -756,5 +759,15 @@ normal_setting: keep-this
             .collect();
 
         assert!(!names.contains(&"session.json".to_string()));
+    }
+
+    #[test]
+    fn resolve_state_dir_never_returns_none() {
+        let dir = tempdir().unwrap();
+        std::env::set_var("GOOSE_PATH_ROOT", dir.path().to_string_lossy().as_ref());
+        let result = resolve_state_dir();
+        std::env::remove_var("GOOSE_PATH_ROOT");
+        assert!(result.is_some());
+        assert_eq!(result.unwrap(), dir.path().join("state"));
     }
 }
