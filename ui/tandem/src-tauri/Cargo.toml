@@ -39,6 +39,8 @@ mime_guess = "2"
 tauri-plugin-shell = "2"
 zip = "0.6"
 regex = "1"
+rand = "0.8"
+hex = "0.4"
 reqwest = { version = "0.12", features = ["json"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
