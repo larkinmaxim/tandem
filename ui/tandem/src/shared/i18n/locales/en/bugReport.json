@@ -1,0 +1,31 @@
+{
+  "button": {
+    "label": "Report a bug"
+  },
+  "modal": {
+    "title": "Report a Bug",
+    "description": "File an issue on GitHub so we can investigate.",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Brief summary (e.g. Sidebar collapses on resize)",
+    "titleValidation": "Title must be at least 3 characters",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What were you doing? What did you expect? You can paste a screenshot here.",
+    "submit": "File on GitHub",
+    "submitting": "Preparing bundle…",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "error": "Couldn't prepare bug bundle: {{reason}}",
+    "truncationNotice": "Description will be truncated to {{limit}} characters ({{excess}} chars will be omitted)",
+    "screenshotChip": "screenshot-{{index}}",
+    "screenshotTooLarge": "Screenshot too large ({{size}} MB) — GitHub caps at 10 MB. Crop and try again.",
+    "removeScreenshot": "Remove screenshot {{index}}"
+  },
+  "toast": {
+    "success": "Bug bundle saved · Drag {{filename}} onto your GitHub issue",
+    "revealInFinder": "Reveal in Finder",
+    "revealInExplorer": "Reveal in Explorer",
+    "revealInFileManager": "Reveal in File Manager",
+    "copyPath": "Copy path",
+    "browserFailed": "Couldn't open browser · URL copied — paste into your browser to file the issue"
+  }
+}

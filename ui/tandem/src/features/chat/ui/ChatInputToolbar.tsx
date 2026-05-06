@@ -35,6 +35,7 @@ import {
   getCatalogEntry,
   resolveAgentProviderCatalogIdStrict,
 } from "@/features/providers/providerCatalog";
+import { BugReportButton } from "@/features/bugReport/ui/BugReportButton";
 
 const NO_PROJECT_VALUE = "__no_project__";
 const CREATE_PROJECT_VALUE = "__create_project__";
@@ -354,6 +355,8 @@ export function ChatInputToolbar({
               </PopoverContent>
             </Popover>
           )}
+
+          <BugReportButton />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
