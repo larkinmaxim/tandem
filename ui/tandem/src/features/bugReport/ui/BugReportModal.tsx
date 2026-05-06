@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { invoke } from "@tauri-apps/api/core";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { toast } from "sonner";
 import { X } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
@@ -16,6 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
+import { revealInFileManager } from "@/shared/lib/fileManager";
+import { getPlatform } from "@/shared/lib/platform";
 import { emitBugReportSubmitted } from "../lib/telemetry";
 
 const REPO_URL = "https://github.com/larkinmaxim/tandem";
@@ -67,6 +70,36 @@ function blobToBase64(blob: Blob): Promise<string> {
     };
     reader.onerror = reject;
     reader.readAsDataURL(blob);
+  });
+}
+
+function getRevealLabel(t: (key: string) => string): string {
+  const platform = getPlatform();
+  if (platform === "mac") return t("toast.revealInFinder");
+  if (platform === "windows") return t("toast.revealInExplorer");
+  return t("toast.revealInFileManager");
+}
+
+function showSuccessToast(
+  t: (key: string, opts?: Record<string, unknown>) => string,
+  zipPath: string,
+  zipFilename: string,
+  browserFailed: boolean,
+) {
+  const message = browserFailed
+    ? t("toast.browserFailed")
+    : t("toast.success", { filename: zipFilename });
+
+  toast(message, {
+    duration: Infinity,
+    action: {
+      label: getRevealLabel(t),
+      onClick: () => void revealInFileManager(zipPath),
+    },
+    cancel: {
+      label: t("toast.copyPath"),
+      onClick: () => void navigator.clipboard.writeText(zipPath),
+    },
   });
 }
 
@@ -139,7 +172,15 @@ export function BugReportModal({ open, onOpenChange }: BugReportModalProps) {
       });
 
       const url = buildIssueUrl(trimmedTitle, description, result.manifest);
-      await openUrl(url);
+      const zipFilename = result.zipPath.split(/[/\\]/).pop() ?? "bundle.zip";
+
+      let browserFailed = false;
+      try {
+        await openUrl(url);
+      } catch {
+        browserFailed = true;
+        await navigator.clipboard.writeText(url).catch(() => {});
+      }
 
       void emitBugReportSubmitted({
         has_description: description.trim().length > 0,
@@ -152,6 +193,8 @@ export function BugReportModal({ open, onOpenChange }: BugReportModalProps) {
       setScreenshots([]);
       setScreenshotError(null);
       onOpenChange(false);
+
+      showSuccessToast(t, result.zipPath, zipFilename, browserFailed);
     } catch (err) {
       const reason = err instanceof Error ? err.message : String(err);
       setError(t("modal.error", { reason }));

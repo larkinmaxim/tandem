@@ -9,6 +9,8 @@ import {
 
 const mockOpenUrl = vi.fn().mockResolvedValue(undefined);
 const mockInvoke = vi.fn();
+const mockToast = vi.fn();
+const mockRevealInFileManager = vi.fn().mockResolvedValue(undefined);
 
 vi.mock("@tauri-apps/plugin-opener", () => ({
   openUrl: (...args: unknown[]) => mockOpenUrl(...args),
@@ -16,6 +18,18 @@ vi.mock("@tauri-apps/plugin-opener", () => ({
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => mockInvoke(...args),
+}));
+
+vi.mock("sonner", () => ({
+  toast: (...args: unknown[]) => mockToast(...args),
+}));
+
+vi.mock("@/shared/lib/fileManager", () => ({
+  revealInFileManager: (...args: unknown[]) => mockRevealInFileManager(...args),
+}));
+
+vi.mock("@/shared/lib/platform", () => ({
+  getPlatform: () => "linux",
 }));
 
 const defaultProps = {
@@ -397,6 +411,76 @@ describe("BugReportModal", () => {
 
       expect(onOpenChange).toHaveBeenCalledWith(false);
       expect(mockInvoke).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("success toast", () => {
+    it("shows toast after successful submit", async () => {
+      const user = userEvent.setup();
+      render(<BugReportModal {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/brief summary/i),
+        "Bug title",
+      );
+      await user.click(
+        screen.getByRole("button", { name: /file on github/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledTimes(1);
+      });
+
+      const [message, options] = mockToast.mock.calls[0];
+      expect(message).toContain("Bug bundle saved");
+      expect(options.duration).toBe(Infinity);
+      expect(options.action.label).toBe("Reveal in File Manager");
+      expect(options.cancel.label).toBe("Copy path");
+    });
+
+    it("reveal action invokes fileManager", async () => {
+      const user = userEvent.setup();
+      render(<BugReportModal {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/brief summary/i),
+        "Bug title",
+      );
+      await user.click(
+        screen.getByRole("button", { name: /file on github/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalled();
+      });
+
+      const [, options] = mockToast.mock.calls[0];
+      options.action.onClick();
+
+      expect(mockRevealInFileManager).toHaveBeenCalledWith(
+        "/tmp/tandem-bug-test.zip",
+      );
+    });
+
+    it("shows browser-failed toast when openUrl rejects", async () => {
+      mockOpenUrl.mockRejectedValueOnce(new Error("no browser"));
+      const user = userEvent.setup();
+      render(<BugReportModal {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/brief summary/i),
+        "Bug title",
+      );
+      await user.click(
+        screen.getByRole("button", { name: /file on github/i }),
+      );
+
+      await waitFor(() => {
+        expect(mockToast).toHaveBeenCalledTimes(1);
+      });
+
+      const [message] = mockToast.mock.calls[0];
+      expect(message).toContain("Couldn't open browser");
     });
   });
 

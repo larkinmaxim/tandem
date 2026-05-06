@@ -19,5 +19,13 @@
     "screenshotChip": "screenshot-{{index}}",
     "screenshotTooLarge": "Screenshot too large ({{size}} MB) — GitHub caps at 10 MB. Crop and try again.",
     "removeScreenshot": "Remove screenshot {{index}}"
+  },
+  "toast": {
+    "success": "Bug bundle saved · Drag {{filename}} onto your GitHub issue",
+    "revealInFinder": "Reveal in Finder",
+    "revealInExplorer": "Reveal in Explorer",
+    "revealInFileManager": "Reveal in File Manager",
+    "copyPath": "Copy path",
+    "browserFailed": "Couldn't open browser · URL copied — paste into your browser to file the issue"
   }
 }
