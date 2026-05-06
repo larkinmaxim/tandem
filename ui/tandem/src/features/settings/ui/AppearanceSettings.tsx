@@ -22,12 +22,6 @@ const ACCENT_COLORS = [
   { name: "indigo", value: "#6366f1" },
 ];
 
-const DENSITY_OPTIONS = [
-  { value: "compact" },
-  { value: "comfortable" },
-  { value: "spacious" },
-] as const;
-
 function SettingRow({
   label,
   description,
@@ -52,8 +46,7 @@ function SettingRow({
 
 export function AppearanceSettings() {
   const { t } = useTranslation("settings");
-  const { theme, setTheme, accentColor, setAccentColor, density, setDensity } =
-    useTheme();
+  const { theme, setTheme, accentColor, setAccentColor } = useTheme();
 
   return (
     <div>
@@ -115,30 +108,6 @@ export function AppearanceSettings() {
             </button>
           ))}
         </div>
-      </SettingRow>
-
-      <Separator className="my-4" />
-
-      <SettingRow
-        label={t("appearance.density.label")}
-        description={t("appearance.density.description")}
-      >
-        <ToggleGroup
-          type="single"
-          value={density}
-          onValueChange={(v) => v && setDensity(v as typeof density)}
-          className="gap-1 rounded-lg bg-muted p-1"
-        >
-          {DENSITY_OPTIONS.map((option) => (
-            <ToggleGroupItem
-              key={option.value}
-              value={option.value}
-              className="rounded-md px-3 py-1.5 text-sm data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm"
-            >
-              {t(`appearance.density.options.${option.value}`)}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
       </SettingRow>
     </div>
   );

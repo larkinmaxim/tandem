@@ -240,10 +240,9 @@
   --duration-normal: 0.2s;
   --duration-slow: 0.4s;
 
-  /* tandem custom — brand accent + density */
+  /* tandem custom — brand accent */
   --color-brand: #8b7cff;
   --color-brand-foreground: #16171b;
-  --density-spacing: 1;
 }
 
 .dark {
@@ -788,22 +787,6 @@ body,
 /* ═══════════════════════════════════════════════════════════
    tandem custom utilities
    ═══════════════════════════════════════════════════════════ */
-
-/* Density-aware spacing utilities */
-.gap-density {
-  gap: calc(0.5rem * var(--density-spacing));
-}
-.p-density {
-  padding: calc(0.5rem * var(--density-spacing));
-}
-.py-density {
-  padding-top: calc(0.5rem * var(--density-spacing));
-  padding-bottom: calc(0.5rem * var(--density-spacing));
-}
-.px-density {
-  padding-left: calc(0.5rem * var(--density-spacing));
-  padding-right: calc(0.5rem * var(--density-spacing));
-}
 
 /* Page-transition animation */
 @keyframes page-fade-in {

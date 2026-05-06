@@ -18,15 +18,6 @@
       "description": "Elige tu color de acento",
       "label": "Color de acento"
     },
-    "density": {
-      "description": "Ajusta el espaciado de los elementos de la interfaz",
-      "label": "Densidad de la interfaz",
-      "options": {
-        "comfortable": "Cómoda",
-        "compact": "Compacta",
-        "spacious": "Espaciosa"
-      }
-    },
     "description": "Personaliza el aspecto de Goose",
     "theme": {
       "description": "Elige tu esquema de color preferido",

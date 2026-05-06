@@ -2,7 +2,6 @@ import * as React from "react";
 
 type ThemePreference = "light" | "dark" | "system";
 type ResolvedTheme = "light" | "dark";
-type Density = "compact" | "comfortable" | "spacious";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -15,16 +14,14 @@ type ThemeProviderState = {
   setTheme: (theme: ThemePreference) => void;
   accentColor: string;
   setAccentColor: (color: string) => void;
-  density: Density;
-  setDensity: (d: Density) => void;
 };
 
 const ThemeProviderContext = React.createContext<
   ThemeProviderState | undefined
 >(undefined);
 
-const LEGACY_KEYS = ["goose-theme", "goose-accent-color", "goose-density"];
-const NEW_KEYS = ["tandem-theme", "tandem-accent-color", "tandem-density"];
+const LEGACY_KEYS = ["goose-theme", "goose-accent-color"];
+const NEW_KEYS = ["tandem-theme", "tandem-accent-color"];
 
 function migrateLocalStorageKeys() {
   for (let i = 0; i < LEGACY_KEYS.length; i++) {
@@ -79,11 +76,6 @@ export function ThemeProvider({
     return localStorage.getItem("tandem-accent-color") ?? "#8b7cff";
   });
 
-  const [density, setDensityState] = React.useState<Density>(() => {
-    const stored = localStorage.getItem("tandem-density") as Density | null;
-    return stored ?? "comfortable";
-  });
-
   const setTheme = React.useCallback((newTheme: ThemePreference) => {
     localStorage.setItem("tandem-theme", newTheme);
     setThemeState(newTheme);
@@ -92,11 +84,6 @@ export function ThemeProvider({
   const setAccentColor = React.useCallback((color: string) => {
     localStorage.setItem("tandem-accent-color", color);
     setAccentColorState(color);
-  }, []);
-
-  const setDensity = React.useCallback((d: Density) => {
-    localStorage.setItem("tandem-density", d);
-    setDensityState(d);
   }, []);
 
   React.useEffect(() => {
@@ -129,14 +116,7 @@ export function ThemeProvider({
       "--color-brand-foreground",
       getContrastColor(accentColor),
     );
-
-    const spacingScale: Record<Density, string> = {
-      compact: "0.75",
-      comfortable: "1",
-      spacious: "1.25",
-    };
-    root.style.setProperty("--density-spacing", spacingScale[density]);
-  }, [accentColor, density]);
+  }, [accentColor]);
 
   const value = React.useMemo(
     () => ({
@@ -145,18 +125,8 @@ export function ThemeProvider({
       setTheme,
       accentColor,
       setAccentColor,
-      density,
-      setDensity,
     }),
-    [
-      theme,
-      resolvedTheme,
-      setTheme,
-      accentColor,
-      setAccentColor,
-      density,
-      setDensity,
-    ],
+    [theme, resolvedTheme, setTheme, accentColor, setAccentColor],
   );
 
   return (

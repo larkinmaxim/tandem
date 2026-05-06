@@ -18,15 +18,6 @@
       "description": "Choose your accent color",
       "label": "Accent Color"
     },
-    "density": {
-      "description": "Adjust the spacing of UI elements",
-      "label": "Interface Density",
-      "options": {
-        "comfortable": "Comfortable",
-        "compact": "Compact",
-        "spacious": "Spacious"
-      }
-    },
     "description": "Customize the look and feel of Goose",
     "theme": {
       "description": "Choose your preferred color scheme",
