@@ -19,6 +19,7 @@ import {
 } from "@/shared/ui/dialog";
 import { revealInFileManager } from "@/shared/lib/fileManager";
 import { getPlatform } from "@/shared/lib/platform";
+import { useChatSessionStore } from "@/features/chat/stores/chatSessionStore";
 import { emitBugReportSubmitted } from "../lib/telemetry";
 
 const REPO_URL = "https://github.com/larkinmaxim/tandem";
@@ -110,6 +111,7 @@ interface BugReportModalProps {
 
 export function BugReportModal({ open, onOpenChange }: BugReportModalProps) {
   const { t } = useTranslation("bugReport");
+  const activeSessionId = useChatSessionStore((s) => s.activeSessionId);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [screenshots, setScreenshots] = useState<string[]>([]);
@@ -169,6 +171,7 @@ export function BugReportModal({ open, onOpenChange }: BugReportModalProps) {
     try {
       const result = await invoke<BundleResult>("bundle_bug_report", {
         screenshots,
+        sessionId: activeSessionId ?? undefined,
       });
 
       const url = buildIssueUrl(trimmedTitle, description, result.manifest);
@@ -185,7 +188,7 @@ export function BugReportModal({ open, onOpenChange }: BugReportModalProps) {
       void emitBugReportSubmitted({
         has_description: description.trim().length > 0,
         has_screenshot: screenshots.length > 0,
-        has_session: false,
+        has_session: activeSessionId != null,
       });
 
       setTitle("");

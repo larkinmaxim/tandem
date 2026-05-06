@@ -225,13 +225,18 @@ fn resolve_output_dir() -> PathBuf {
     std::env::temp_dir()
 }
 
-fn build_manifest(recent_errors: &str) -> String {
+fn build_manifest(recent_errors: &str, session_id: Option<&str>) -> String {
     let os = std::env::consts::OS;
     let arch = std::env::consts::ARCH;
     let app_version = env!("CARGO_PKG_VERSION");
 
+    let session_line = match session_id {
+        Some(id) => format!("- Session: {id}"),
+        None => "- Session: (none)".to_string(),
+    };
+
     let errors_section = if recent_errors == "_No recent errors._" {
-        format!("_No recent errors._")
+        "_No recent errors._".to_string()
     } else {
         format!("<details>\n<summary>Last errors/warnings</summary>\n\n```\n{recent_errors}\n```\n</details>")
     };
@@ -241,7 +246,7 @@ fn build_manifest(recent_errors: &str) -> String {
          - App version: {app_version}\n\
          - OS: {os}\n\
          - Arch: {arch}\n\
-         - Session: (none)\n\n\
+         {session_line}\n\n\
          ## Recent errors\n\n\
          {errors_section}\n\n\
          ## Diagnostics\n\n\
@@ -265,6 +270,8 @@ fn add_file_to_zip<W: Write + std::io::Seek>(
 pub fn bundle_bug_report_impl(
     screenshots: Vec<String>,
     output_dir: Option<PathBuf>,
+    session_id: Option<String>,
+    session_json: Option<String>,
 ) -> Result<BugReportResult, String> {
     let secret_patterns = build_secret_patterns();
     let state_dir = resolve_state_dir();
@@ -337,6 +344,12 @@ pub fn bundle_bug_report_impl(
         }
     }
 
+    // Session export (scrubbed)
+    if let Some(ref json) = session_json {
+        let scrubbed = scrub_text(json, &secret_patterns);
+        add_file_to_zip(&mut zip, "session.json", scrubbed.as_bytes())?;
+    }
+
     // Screenshots (base64 -> PNG)
     for (i, b64) in screenshots.iter().enumerate() {
         match base64::engine::general_purpose::STANDARD.decode(b64) {
@@ -353,7 +366,7 @@ pub fn bundle_bug_report_impl(
     zip.finish()
         .map_err(|e| format!("Failed to finalize ZIP: {e}"))?;
 
-    let manifest = build_manifest(&recent_errors);
+    let manifest = build_manifest(&recent_errors, session_id.as_deref());
 
     Ok(BugReportResult {
         zip_path: zip_path.to_string_lossy().into_owned(),
@@ -361,11 +374,46 @@ pub fn bundle_bug_report_impl(
     })
 }
 
+async fn fetch_session_export(port: u16, session_id: &str) -> Option<String> {
+    let url = format!("http://127.0.0.1:{port}/sessions/{session_id}/export");
+    let resp = reqwest::get(&url).await.ok()?;
+    if !resp.status().is_success() {
+        return None;
+    }
+    resp.json::<String>().await.ok()
+}
+
 #[tauri::command]
-pub async fn bundle_bug_report(screenshots: Vec<String>) -> Result<BugReportResult, String> {
-    tokio::task::spawn_blocking(move || bundle_bug_report_impl(screenshots, None))
-        .await
-        .map_err(|e| format!("Bug report task failed: {e}"))?
+pub async fn bundle_bug_report(
+    app_handle: tauri::AppHandle,
+    screenshots: Vec<String>,
+    session_id: Option<String>,
+) -> Result<BugReportResult, String> {
+    let session_json = if let Some(ref sid) = session_id {
+        match crate::services::acp::GooseServeProcess::get(app_handle).await {
+            Ok(process) => {
+                let ws_url = process.ws_url();
+                let port = ws_url
+                    .split(':')
+                    .last()
+                    .and_then(|s| s.trim_end_matches("/acp").parse::<u16>().ok());
+                if let Some(port) = port {
+                    fetch_session_export(port, sid).await
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        }
+    } else {
+        None
+    };
+
+    tokio::task::spawn_blocking(move || {
+        bundle_bug_report_impl(screenshots, None, session_id, session_json)
+    })
+    .await
+    .map_err(|e| format!("Bug report task failed: {e}"))?
 }
 
 #[cfg(test)]
@@ -520,7 +568,7 @@ normal_setting: keep-this
         let output_dir = root.join("output");
         fs::create_dir_all(&output_dir).unwrap();
 
-        let result = bundle_bug_report_impl(vec![], Some(output_dir)).unwrap();
+        let result = bundle_bug_report_impl(vec![], Some(output_dir), None, None).unwrap();
         std::env::remove_var("GOOSE_PATH_ROOT");
 
         // Read the ZIP and verify excluded files are absent
@@ -538,16 +586,23 @@ normal_setting: keep-this
 
     #[test]
     fn manifest_has_environment_block() {
-        let manifest = build_manifest("_No recent errors._");
+        let manifest = build_manifest("_No recent errors._", None);
         assert!(manifest.contains("## Environment"));
         assert!(manifest.contains("App version:"));
         assert!(manifest.contains("Session: (none)"));
     }
 
     #[test]
+    fn manifest_shows_session_id_when_provided() {
+        let manifest = build_manifest("_No recent errors._", Some("abc-123"));
+        assert!(manifest.contains("Session: abc-123"));
+        assert!(!manifest.contains("(none)"));
+    }
+
+    #[test]
     fn manifest_includes_error_details() {
         let errors = "2026-01-01 ERROR something broke\n2026-01-01 WARN disk full";
-        let manifest = build_manifest(errors);
+        let manifest = build_manifest(errors, None);
         assert!(manifest.contains("<details>"));
         assert!(manifest.contains("something broke"));
         assert!(manifest.contains("disk full"));
@@ -599,7 +654,9 @@ normal_setting: keep-this
             "GOOSE_PATH_ROOT",
             dir.path().join("fake").to_string_lossy().as_ref(),
         );
-        let result = bundle_bug_report_impl(vec![png_b64.to_string()], Some(output_dir)).unwrap();
+        let result =
+            bundle_bug_report_impl(vec![png_b64.to_string()], Some(output_dir), None, None)
+                .unwrap();
         std::env::remove_var("GOOSE_PATH_ROOT");
 
         let file = fs::File::open(&result.zip_path).unwrap();
@@ -627,7 +684,7 @@ normal_setting: keep-this
         std::env::set_var("GOOSE_PATH_ROOT", root.to_string_lossy().as_ref());
         let output_dir = root.join("output");
         fs::create_dir_all(&output_dir).unwrap();
-        let result = bundle_bug_report_impl(vec![], Some(output_dir)).unwrap();
+        let result = bundle_bug_report_impl(vec![], Some(output_dir), None, None).unwrap();
         std::env::remove_var("GOOSE_PATH_ROOT");
 
         let file = fs::File::open(&result.zip_path).unwrap();
@@ -639,5 +696,65 @@ normal_setting: keep-this
 
         assert!(contents.contains("[REDACTED]"));
         assert!(!contents.contains("sk-abc123"));
+    }
+
+    #[test]
+    fn session_json_included_and_scrubbed() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        let (_state, _config, _data) = setup_fixture_dirs(root);
+
+        std::env::set_var("GOOSE_PATH_ROOT", root.to_string_lossy().as_ref());
+        let output_dir = root.join("output");
+        fs::create_dir_all(&output_dir).unwrap();
+
+        let session_json =
+            r#"{"id":"sess-1","messages":[{"content":"key sk-abc123def456ghi789jkl012345"}]}"#;
+
+        let result = bundle_bug_report_impl(
+            vec![],
+            Some(output_dir),
+            Some("sess-1".to_string()),
+            Some(session_json.to_string()),
+        )
+        .unwrap();
+        std::env::remove_var("GOOSE_PATH_ROOT");
+
+        assert!(result.manifest.contains("Session: sess-1"));
+
+        let file = fs::File::open(&result.zip_path).unwrap();
+        let mut archive = zip::ZipArchive::new(file).unwrap();
+
+        let mut entry = archive.by_name("session.json").unwrap();
+        let mut contents = String::new();
+        entry.read_to_string(&mut contents).unwrap();
+
+        assert!(contents.contains("[REDACTED]"));
+        assert!(!contents.contains("sk-abc123"));
+        assert!(contents.contains("sess-1"));
+    }
+
+    #[test]
+    fn no_session_json_when_none_provided() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        let (_state, _config, _data) = setup_fixture_dirs(root);
+
+        std::env::set_var("GOOSE_PATH_ROOT", root.to_string_lossy().as_ref());
+        let output_dir = root.join("output");
+        fs::create_dir_all(&output_dir).unwrap();
+
+        let result = bundle_bug_report_impl(vec![], Some(output_dir), None, None).unwrap();
+        std::env::remove_var("GOOSE_PATH_ROOT");
+
+        assert!(result.manifest.contains("Session: (none)"));
+
+        let file = fs::File::open(&result.zip_path).unwrap();
+        let archive = zip::ZipArchive::new(file).unwrap();
+        let names: Vec<String> = (0..archive.len())
+            .map(|i| archive.by_index(i).unwrap().name().to_string())
+            .collect();
+
+        assert!(!names.contains(&"session.json".to_string()));
     }
 }

@@ -32,6 +32,12 @@ vi.mock("@/shared/lib/platform", () => ({
   getPlatform: () => "linux",
 }));
 
+let mockActiveSessionId: string | null = null;
+vi.mock("@/features/chat/stores/chatSessionStore", () => ({
+  useChatSessionStore: (selector: (s: { activeSessionId: string | null }) => unknown) =>
+    selector({ activeSessionId: mockActiveSessionId }),
+}));
+
 const defaultProps = {
   open: true,
   onOpenChange: vi.fn(),
@@ -40,6 +46,7 @@ const defaultProps = {
 describe("BugReportModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockActiveSessionId = null;
     mockInvoke.mockResolvedValue({
       zipPath: "/tmp/tandem-bug-test.zip",
       manifest: "## Environment\n- App version: 0.1.0",
@@ -481,6 +488,55 @@ describe("BugReportModal", () => {
 
       const [message] = mockToast.mock.calls[0];
       expect(message).toContain("Couldn't open browser");
+    });
+  });
+
+  describe("session ID passthrough", () => {
+    it("passes activeSessionId to bundle_bug_report when session is active", async () => {
+      mockActiveSessionId = "sess-abc-123";
+      const user = userEvent.setup();
+      render(<BugReportModal {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/brief summary/i),
+        "Bug title",
+      );
+      await user.click(
+        screen.getByRole("button", { name: /file on github/i }),
+      );
+
+      await waitFor(() => {
+        const bundleCalls = mockInvoke.mock.calls.filter(
+          (c) => c[0] === "bundle_bug_report",
+        );
+        expect(bundleCalls).toHaveLength(1);
+        expect(bundleCalls[0][1]).toEqual({
+          screenshots: [],
+          sessionId: "sess-abc-123",
+        });
+      });
+    });
+
+    it("omits sessionId when no active session", async () => {
+      mockActiveSessionId = null;
+      const user = userEvent.setup();
+      render(<BugReportModal {...defaultProps} />);
+
+      await user.type(
+        screen.getByPlaceholderText(/brief summary/i),
+        "Bug title",
+      );
+      await user.click(
+        screen.getByRole("button", { name: /file on github/i }),
+      );
+
+      await waitFor(() => {
+        const bundleCalls = mockInvoke.mock.calls.filter(
+          (c) => c[0] === "bundle_bug_report",
+        );
+        expect(bundleCalls).toHaveLength(1);
+        expect(bundleCalls[0][1].sessionId).toBeUndefined();
+      });
     });
   });
 
