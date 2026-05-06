@@ -1,6 +1,7 @@
 pub mod acp;
 pub mod agent_setup;
 pub mod agents;
+pub mod bug_report;
 pub mod credentials;
 pub mod doctor;
 pub mod extensions;
