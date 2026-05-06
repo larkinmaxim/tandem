@@ -1,0 +1,16 @@
+{
+  "button": {
+    "label": "Report a bug"
+  },
+  "modal": {
+    "title": "Report a Bug",
+    "description": "File an issue on GitHub so we can investigate.",
+    "titleLabel": "Title",
+    "titlePlaceholder": "Brief summary (e.g. Sidebar collapses on resize)",
+    "titleValidation": "Title must be at least 3 characters",
+    "descriptionLabel": "Description",
+    "descriptionPlaceholder": "What were you doing? What did you expect? You can paste a screenshot here.",
+    "submit": "File on GitHub",
+    "cancel": "Cancel"
+  }
+}
