@@ -234,6 +234,10 @@ describe("BugReportModal", () => {
         ).toBeInTheDocument();
       });
 
+      const callsBefore = mockInvoke.mock.calls.filter(
+        (c) => c[0] === "bundle_bug_report",
+      ).length;
+
       mockInvoke.mockResolvedValueOnce({
         zipPath: "/tmp/test.zip",
         manifest: "test",
@@ -242,7 +246,10 @@ describe("BugReportModal", () => {
       await user.click(screen.getByRole("button", { name: /retry/i }));
 
       await waitFor(() => {
-        expect(mockInvoke).toHaveBeenCalledTimes(2);
+        const callsAfter = mockInvoke.mock.calls.filter(
+          (c) => c[0] === "bundle_bug_report",
+        ).length;
+        expect(callsAfter).toBe(callsBefore + 1);
       });
     });
   });

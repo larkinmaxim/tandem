@@ -12,3 +12,4 @@ pub mod path_resolver;
 pub mod projects;
 pub mod skills;
 pub mod system;
+pub mod telemetry;

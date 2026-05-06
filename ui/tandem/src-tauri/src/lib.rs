@@ -94,6 +94,7 @@ pub fn run() {
             commands::system::read_image_attachment,
             commands::system::read_text_file,
             commands::bug_report::bundle_bug_report,
+            commands::telemetry::is_telemetry_disabled,
         ])
         .setup(|_app| Ok(()))
         .build(tauri::generate_context!())

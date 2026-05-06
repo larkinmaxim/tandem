@@ -16,6 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/shared/ui/dialog";
+import { emitBugReportSubmitted } from "../lib/telemetry";
 
 const REPO_URL = "https://github.com/larkinmaxim/tandem";
 const MIN_TITLE_LENGTH = 3;
@@ -139,6 +140,12 @@ export function BugReportModal({ open, onOpenChange }: BugReportModalProps) {
 
       const url = buildIssueUrl(trimmedTitle, description, result.manifest);
       await openUrl(url);
+
+      void emitBugReportSubmitted({
+        has_description: description.trim().length > 0,
+        has_screenshot: screenshots.length > 0,
+        has_session: false,
+      });
 
       setTitle("");
       setDescription("");
