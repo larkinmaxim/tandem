@@ -375,9 +375,14 @@ pub fn bundle_bug_report_impl(
     })
 }
 
-async fn fetch_session_export(port: u16, session_id: &str) -> Option<String> {
+async fn fetch_session_export(port: u16, session_id: &str, secret: &str) -> Option<String> {
     let url = format!("http://127.0.0.1:{port}/sessions/{session_id}/export");
-    let resp = reqwest::get(&url).await.ok()?;
+    let resp = reqwest::Client::new()
+        .get(&url)
+        .header("X-Secret-Key", secret)
+        .send()
+        .await
+        .ok()?;
     if !resp.status().is_success() {
         return None;
     }
@@ -399,7 +404,7 @@ pub async fn bundle_bug_report(
                     .last()
                     .and_then(|s| s.trim_end_matches("/acp").parse::<u16>().ok());
                 if let Some(port) = port {
-                    fetch_session_export(port, sid).await
+                    fetch_session_export(port, sid, process.secret_key()).await
                 } else {
                     None
                 }
